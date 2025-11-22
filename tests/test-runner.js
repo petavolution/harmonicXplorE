@@ -374,6 +374,100 @@ async function runTests() {
         logException('EventGearLite tests failed', err);
     }
 
+    // ==================== EventGearAssertion Tests ====================
+    info('--- Testing EventGearAssertion ---');
+
+    try {
+        const { Assertion, check, assert: assertModule } = await import('../src/utils/EventGearAssertion.js');
+
+        success('EventGearAssertion module loaded successfully');
+
+        // Test Assertion class
+        const checkInstance = new Assertion(false);
+        assertEqual(checkInstance.true(true), true, 'Assertion.true(true) returns true');
+        assertEqual(checkInstance.true(false), false, 'Assertion.true(false) returns false');
+        assertEqual(checkInstance.false(false), true, 'Assertion.false(false) returns true');
+        assertEqual(checkInstance.equal(5, 5), true, 'Assertion.equal(5, 5) returns true');
+        assertEqual(checkInstance.equal(5, 6), false, 'Assertion.equal(5, 6) returns false');
+        assertEqual(checkInstance.bigger(10, 5), true, 'Assertion.bigger(10, 5) returns true');
+        assertEqual(checkInstance.smaller(5, 10), true, 'Assertion.smaller(5, 10) returns true');
+        assertEqual(checkInstance.between(5, 0, 10), true, 'Assertion.between(5, 0, 10) returns true');
+        assertEqual(checkInstance.approxEqual(100, 101, 0.02), true, 'Assertion.approxEqual with tolerance');
+        assertEqual(checkInstance.isFunction(() => {}), true, 'Assertion.isFunction returns true for function');
+        assertEqual(checkInstance.isObject({}), true, 'Assertion.isObject returns true for object');
+        assertEqual(checkInstance.arrayContains([1, 2, 3], 2), true, 'Assertion.arrayContains finds element');
+        assertEqual(checkInstance.stringContains('hello world', 'world'), true, 'Assertion.stringContains finds substring');
+
+        // Test pre-configured instances
+        assert(check !== undefined, 'check instance exported');
+        assert(assertModule !== undefined, 'assert instance exported');
+        assertEqual(check.raiseError, false, 'check does not raise errors');
+        assertEqual(assertModule.raiseError, true, 'assert raises errors');
+
+        // Test error-raising assertion
+        assertThrows(() => assertModule.true(false), 'Error', 'assert.true(false) throws');
+        assertThrows(() => assertModule.equal(1, 2), 'Error', 'assert.equal(1, 2) throws');
+
+    } catch (err) {
+        logException('EventGearAssertion tests failed', err);
+    }
+
+    // ==================== EventGearCallback Tests ====================
+    info('--- Testing EventGearCallback ---');
+
+    try {
+        const { CallbackTracker } = await import('../src/utils/EventGearCallback.js');
+
+        success('EventGearCallback module loaded successfully');
+
+        const tracker = new CallbackTracker(true, 0);
+
+        // Test callback registration
+        let callCount = 0;
+        tracker.registerCallback('test1', () => true, () => callCount++, 5, 'test');
+        assert(tracker.callbackIds.includes('test1'), 'Callback registered with ID');
+
+        // Test checkCallbacks
+        tracker.checkCallbacks();
+        assertEqual(callCount, 1, 'Callback executed when check returns true');
+
+        tracker.checkCallbacks();
+        assertEqual(callCount, 2, 'Callback executed again on second check');
+
+        // Test callback with check that returns false
+        tracker.registerCallback('test2', () => false, () => callCount++, 5, 'test');
+        tracker.checkCallbacks();
+        assertEqual(callCount, 3, 'Only test1 callback executed (test2 check is false)');
+
+        // Test removeCallback
+        tracker.removeCallback('test1');
+        assert(!tracker.callbackIds.includes('test1'), 'Callback removed');
+
+        // Test reset
+        tracker.reset();
+        assertEqual(tracker.callbackIds.length, 0, 'Reset clears all callbacks');
+
+        // Test getters
+        tracker.registerCallback('metrics', () => true, () => {}, 7);
+        assertEqual(tracker.getPriority('metrics'), 7, 'getPriority returns correct value');
+
+        // Test setters
+        tracker.setPriority(3, 'metrics');
+        assertEqual(tracker.getPriority('metrics'), 3, 'setPriority updates value');
+
+        tracker.setCheckActive(false, 'metrics');
+        assertEqual(tracker.getCheckActive('metrics'), false, 'setCheckActive updates value');
+
+        // Test metrics
+        const metrics = tracker.getCallbackMetrics();
+        assert(Array.isArray(metrics), 'getCallbackMetrics returns array');
+
+        tracker.reset();
+
+    } catch (err) {
+        logException('EventGearCallback tests failed', err);
+    }
+
     // ==================== Index Module Tests ====================
     info('--- Testing Index Module Exports ---');
 
@@ -399,6 +493,10 @@ async function runTests() {
         assert(indexModule.DataTimestampCountBuffer !== undefined, 'Index exports DataTimestampCountBuffer');
         assert(indexModule.WebSocketBridge !== undefined, 'Index exports WebSocketBridge');
         assert(indexModule.NodeBridge !== undefined, 'Index exports NodeBridge');
+        assert(indexModule.Assertion !== undefined, 'Index exports Assertion');
+        assert(indexModule.check !== undefined, 'Index exports check');
+        assert(indexModule.assert !== undefined, 'Index exports assert');
+        assert(indexModule.CallbackTracker !== undefined, 'Index exports CallbackTracker');
         assert(indexModule.default !== undefined, 'Index has default export (EventGear)');
 
     } catch (err) {

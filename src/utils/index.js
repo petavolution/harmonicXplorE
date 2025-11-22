@@ -11,6 +11,12 @@ export { default as EventGear } from './EventGear.js';
 // Lite version (simplified, smaller footprint)
 export { default as EventGearLite } from './EventGearLite.js';
 
+// Assertion utilities
+export { Assertion, check, assert } from './EventGearAssertion.js';
+
+// Callback management
+export { CallbackTracker } from './EventGearCallback.js';
+
 // Utilities
 export {
     calculateFrequency,

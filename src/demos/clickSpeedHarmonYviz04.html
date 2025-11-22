@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Harmonic Click Visualizer - Advanced Harmonics</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      background-color: #000;
+      overflow: hidden;
+      color: white;
+    }
+    .menu {
+      padding: 10px;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      z-index: 10;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+    #visualizerCanvas {
+      flex-grow: 1;
+      width: 100%;
+      border: 1px solid red; /* Make canvas visible for debugging */
+    }
+    .info {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background-color: rgba(0, 0, 0, 0.7);
+      padding: 10px;
+      border-radius: 5px;
+      z-index: 10;
+    }
+    button {
+      margin: 0 5px;
+      padding: 5px 10px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    select, input {
+      background-color: #333;
+      color: white;
+      border: 1px solid #555;
+      padding: 4px;
+      border-radius: 4px;
+    }
+    label {
+      margin-right: 5px;
+    }
+    .setting-group {
+      display: flex;
+      align-items: center;
+      margin-right: 15px;
+    }
+    #waveformDisplay {
+      position: absolute;
+      top: 60px;
+      right: 20px;
+      background-color: rgba(0, 0, 0, 0.7);
+      padding: 10px;
+      border-radius: 5px;
+      z-index: 10;
+      width: 200px;
+      height: 100px;
+      border: 1px solid #555;
+    }
+  </style>
+</head>
+<body>
+  <div class="menu">
+    <h3>Advanced Harmonics Visualizer</h3>
+    <div class="setting-group">
+      <label for="harmonicsType">Harmonics:</label>
+      <select id="harmonicsType">
+        <option value="natural" selected>Natural</option>
+        <option value="octave">Octave</option>
+        <option value="odd">Odd</option>
+        <option value="even">Even</option>
+        <option value="prime">Prime</option>
+        <option value="fibonacci">Fibonacci</option>
+      </select>
+      <input type="number" id="harmonicCount" min="1" max="16" value="4" title="Number of harmonics">
+    </div>
+    <div class="setting-group">
+      <label for="waveformType">Waveform:</label>
+      <select id="waveformType">
+        <option value="sine" selected>Sine</option>
+        <option value="square">Square</option>
+        <option value="sawtooth">Sawtooth</option>
+        <option value="triangle">Triangle</option>
+        <option value="custom">Custom</option>
+      </select>
+    </div>
+    <button id="audioTestButton">Test Audio</button>
+    <button id="toggleAudio">Audio: ON</button>
+  </div>
+  <canvas id="visualizerCanvas"></canvas>
+  <div id="waveformDisplay"></div>
+  <div class="info">
+    <div>Click canvas to create harmonic shapes with sound</div>
+    <div>Debug Info: <span id="debugInfo">Initializing...</span></div>
+  </div>
+
+  <script type="module">
+    import EventGear from '../../EventGear.js';
+    
+    // Initialize on DOM load
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initialize EventGear
+      const eventGear = new EventGear(100);
+      eventGear.start();
+      
+      // Debug element
+      const debugInfoElement = document.getElementById('debugInfo');
+      function updateDebugInfo(text) {
+        console.log(text);
+        debugInfoElement.textContent = text;
+      }
+      
+      updateDebugInfo('DOMContentLoaded');
+      
+      // DOM elements
+      const harmonicsTypeSelect = document.getElementById('harmonicsType');
+      const harmonicCountInput = document.getElementById('harmonicCount');
+      const waveformTypeSelect = document.getElementById('waveformType');
+      const waveformDisplay = document.getElementById('waveformDisplay');
+      const toggleAudioButton = document.getElementById('toggleAudio');
+      
+      // Audio context and settings
+      let audioContext = null;
+      let audioEnabled = true;
+      
+      // Initialize audio on first user interaction (required by browsers)
+      function initAudio() {
+        if (audioContext) return;
+        
+        try {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          updateDebugInfo('Audio context initialized');
+        } catch (error) {
+          console.error('Web Audio API not supported:', error);
+          updateDebugInfo('ERROR: Audio not supported');
+          audioEnabled = false;
+        }
+      }
+      
+      // Toggle audio
+      toggleAudioButton.addEventListener('click', () => {
+        audioEnabled = !audioEnabled;
+        toggleAudioButton.textContent = `Audio: ${audioEnabled ? 'ON' : 'OFF'}`;
+        updateDebugInfo(`Audio ${audioEnabled ? 'enabled' : 'disabled'}`);
+      });
+      
+      // Test audio button
+      document.getElementById('audioTestButton').addEventListener('click', () => {
+        initAudio();
+        if (audioEnabled) {
+          const baseFreq = 220;
+          playHarmonicSound(baseFreq, 1.0, 0.5);
+          updateDebugInfo('Audio test played');
+        }
+      });
+      
+      // Harmonic series generators
+      const harmonicSeries = {
+        natural: (baseFreq, count) => {
+          return Array.from({length: count}, (_, i) => baseFreq * (i + 1));
+        },
+        octave: (baseFreq, count) => {
+          return Array.from({length: count}, (_, i) => baseFreq * Math.pow(2, i));
+        },
+        odd: (baseFreq, count) => {
+          return Array.from({length: count}, (_, i) => baseFreq * (2 * i + 1));
+        },
+        even: (baseFreq, count) => {
+          return Array.from({length: count}, (_, i) => baseFreq * (2 * (i + 1)));
+        },
+        prime: (baseFreq, count) => {
+          const primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53];
+          return primes.slice(0, count).map(p => baseFreq * p / 2);
+        },
+        fibonacci: (baseFreq, count) => {
+          const fibs = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597];
+          return fibs.slice(0, count).map(f => baseFreq * f / fibs[0]);
+        }
+      };
+      
+      // Create waveform display
+      function drawWaveformDisplay(frequencies, amplitudes) {
+        const canvas = document.createElement('canvas');
+        canvas.width = waveformDisplay.clientWidth;
+        canvas.height = waveformDisplay.clientHeight;
+        const ctx = canvas.getContext('2d');
+        
+        // Clear
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw the waveform
+        ctx.strokeStyle = 'lime';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        
+        const sampleCount = canvas.width;
+        const amplitude = canvas.height / 3;
+        const centerY = canvas.height / 2;
+        
+        for (let x = 0; x < sampleCount; x++) {
+          let sample = 0;
+          
+          // Sum all frequencies
+          for (let i = 0; i < frequencies.length; i++) {
+            const freq = frequencies[i];
+            const amp = amplitudes[i];
+            sample += Math.sin((x / sampleCount) * Math.PI * 2 * freq / 10) * amp;
+          }
+          
+          // Normalize and draw
+          const y = centerY - sample * amplitude;
+          if (x === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        
+        ctx.stroke();
+        
+        // Draw frequency markers
+        ctx.fillStyle = 'white';
+        ctx.font = '10px Arial';
+        ctx.textAlign = 'right';
+        ctx.fillText(`Base: ${frequencies[0].toFixed(1)}Hz`, canvas.width - 5, 12);
+        
+        // Clear previous content and add new canvas
+        waveformDisplay.innerHTML = '';
+        waveformDisplay.appendChild(canvas);
+      }
+      
+      // Play a sound with harmonics
+      function playHarmonicSound(baseFrequency, duration = 1.0, pan = 0.5) {
+        if (!audioEnabled || !audioContext) return;
+        
+        try {
+          // Get harmonics settings
+          const harmonicType = harmonicsTypeSelect.value;
+          const harmonicCount = parseInt(harmonicCountInput.value);
+          const waveformType = waveformTypeSelect.value;
+          
+          // Generate harmonic frequencies
+          const frequencies = harmonicSeries[harmonicType](baseFrequency, harmonicCount);
+          
+          // Create amplitudes (decreasing for higher harmonics)
+          const amplitudes = frequencies.map((_, i) => 1.0 / (i + 1));
+          
+          // Draw waveform visualization
+          drawWaveformDisplay(frequencies, amplitudes);
+          
+          // Create master gain node
+          const masterGain = audioContext.createGain();
+          const pannerNode = audioContext.createStereoPanner();
+          pannerNode.pan.value = (pan * 2) - 1; // Convert 0-1 to -1 to 1
+          
+          // Connect master to output
+          masterGain.connect(pannerNode);
+          pannerNode.connect(audioContext.destination);
+          
+          // Create and connect oscillators for each harmonic
+          frequencies.forEach((freq, i) => {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            // Set oscillator properties
+            oscillator.type = waveformType === 'custom' ? 'sine' : waveformType;
+            oscillator.frequency.value = freq;
+            
+            // Set gain based on harmonic position
+            gainNode.gain.value = amplitudes[i] * 0.7;
+            
+            // Connect nodes
+            oscillator.connect(gainNode);
+            gainNode.connect(masterGain);
+            
+            // Apply envelope
+            masterGain.gain.setValueAtTime(0, audioContext.currentTime);
+            masterGain.gain.linearRampToValueAtTime(0.7, audioContext.currentTime + 0.01);
+            masterGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            
+            // Start and stop
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + duration);
+          });
+          
+          // Update debug info
+          const frequencyText = frequencies.map(f => f.toFixed(0)).join(', ');
+          updateDebugInfo(`Played harmonics: ${frequencyText} Hz, pan: ${pan.toFixed(2)}`);
+          
+          // Return the frequencies for visualization
+          return {
+            frequencies,
+            amplitudes,
+            baseFrequency
+          };
+        } catch (error) {
+          console.error('Error playing harmonic sound:', error);
+          updateDebugInfo('ERROR: Failed to play sound');
+          return null;
+        }
+      }
+      
+      // Canvas setup
+      const canvas = document.getElementById('visualizerCanvas');
+      const ctx = canvas.getContext('2d');
+      
+      // Set canvas size
+      function resizeCanvas() {
+        const menuHeight = document.querySelector('.menu').offsetHeight;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight - menuHeight;
+        updateDebugInfo(`Canvas resized: ${canvas.width}x${canvas.height}`);
+      }
+
+      // Call resize on load and when window resizes
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas();
+      
+      // Store shapes for rendering
+      const shapes = [];
+      
+      // Generate a color based on harmonic series
+      function getHarmonicColor(frequencies) {
+        // Base hue on fundamental frequency
+        const baseFreq = frequencies[0];
+        const hue = ((baseFreq - 110) / 880 * 360) % 360;
+        
+        // Saturation based on number of harmonics
+        const saturation = Math.min(100, 40 + frequencies.length * 5);
+        
+        // Lightness fixed
+        const lightness = 50;
+        
+        return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+      }
+      
+      // Create a shape with harmonic sound
+      function createHarmonicShape(x, y) {
+        // Calculate frequency based on y position (higher = higher pitch)
+        const normalizedY = 1 - (y / canvas.height); // 0 at bottom, 1 at top
+        const baseFrequency = 110 + normalizedY * 440; // 110Hz to 550Hz
+        
+        // Calculate pan based on x position
+        const pan = x / canvas.width; // 0 at left, 1 at right
+        
+        // Play sound and get harmonic data
+        initAudio();
+        const harmonicData = audioEnabled ? 
+          playHarmonicSound(baseFrequency, 2.0, pan) : 
+          {
+            frequencies: harmonicSeries[harmonicsTypeSelect.value](baseFrequency, parseInt(harmonicCountInput.value)),
+            amplitudes: Array(parseInt(harmonicCountInput.value)).fill(0).map((_, i) => 1.0 / (i + 1)),
+            baseFrequency
+          };
+        
+        if (!harmonicData) return;
+        
+        // Create visual shape
+        const colorBase = getHarmonicColor(harmonicData.frequencies);
+        
+        // Create the main shape
+        shapes.push({
+          x,
+          y,
+          radius: 30,
+          color: colorBase,
+          growth: 0.3,
+          opacity: 1,
+          lifetime: 0,
+          maxLifetime: 4, // seconds
+          frequencies: harmonicData.frequencies,
+          amplitudes: harmonicData.amplitudes,
+          harmonics: []
+        });
+        
+        // Register event
+        eventGear.registerEvent({
+          type: 'shape.create',
+          x,
+          y,
+          baseFrequency,
+          harmonics: harmonicData.frequencies.length
+        });
+        
+        updateDebugInfo(`Harmonic shape created at (${x}, ${y}). Base: ${baseFrequency.toFixed(0)}Hz`);
+      }
+      
+      // Handle clicks on canvas
+      canvas.addEventListener('click', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        createHarmonicShape(x, y);
+      });
+      
+      // Create harmonic visualization from shape data
+      function createHarmonicVisuals(shape) {
+        // Clear previous harmonics
+        shape.harmonics = [];
+        
+        // Add a visual element for each harmonic
+        shape.frequencies.forEach((freq, i) => {
+          // Calculate radius based on wavelength and amplitude
+          const wavelength = 344 / freq; // speed of sound / frequency = wavelength (m)
+          const scaledRadius = wavelength * 10; // Scale for better visibility
+          const amplitude = shape.amplitudes[i];
+          
+          // Add harmonic visual
+          shape.harmonics.push({
+            frequency: freq,
+            amplitude,
+            radius: scaledRadius,
+            phase: 0
+          });
+        });
+      }
+      
+      // Animation loop
+      function animate() {
+        // Clear the canvas with slight fade for trails
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Time value for wave animation
+        const time = Date.now() / 1000;
+        
+        // Draw all shapes
+        let activeShapes = 0;
+        for (let i = shapes.length - 1; i >= 0; i--) {
+          const shape = shapes[i];
+          
+          // Update shape properties
+          shape.lifetime += 1/60; // assuming 60fps
+          shape.radius += shape.growth;
+          shape.opacity = Math.max(0, 1 - (shape.lifetime / shape.maxLifetime));
+          
+          // Ensure harmonics are created
+          if (shape.harmonics.length === 0) {
+            createHarmonicVisuals(shape);
+          }
+          
+          // Draw main shape
+          ctx.beginPath();
+          ctx.fillStyle = shape.color.replace(')', `, ${shape.opacity})`).replace('hsl', 'hsla');
+          ctx.arc(shape.x, shape.y, shape.radius, 0, Math.PI * 2);
+          ctx.fill();
+          
+          // Draw harmonic circles
+          shape.harmonics.forEach((harmonic, index) => {
+            // Update phase for wave-like animation
+            harmonic.phase = (harmonic.phase + (harmonic.frequency / 100)) % (Math.PI * 2);
+            
+            // Calculate visualization radius with wave-like motion
+            const waveOffset = Math.sin(time * harmonic.frequency / 20) * 5;
+            const visualRadius = harmonic.radius * harmonic.amplitude * shape.opacity + waveOffset;
+            
+            // Draw harmonic circle
+            ctx.beginPath();
+            ctx.strokeStyle = shape.color.replace(')', `, ${shape.opacity * 0.7})`).replace('hsl', 'hsla');
+            ctx.lineWidth = 2 * shape.opacity;
+            
+            // Add waviness to the circle based on frequency
+            const segments = 32;
+            const angleStep = (Math.PI * 2) / segments;
+            
+            for (let j = 0; j <= segments; j++) {
+              const angle = j * angleStep;
+              
+              // Add wave displacement based on frequency
+              const waveDisplacement = Math.sin(angle * index + harmonic.phase) * (5 * harmonic.amplitude);
+              const radius = visualRadius + waveDisplacement;
+              
+              const x = shape.x + Math.cos(angle) * radius;
+              const y = shape.y + Math.sin(angle) * radius;
+              
+              if (j === 0) {
+                ctx.moveTo(x, y);
+              } else {
+                ctx.lineTo(x, y);
+              }
+            }
+            
+            ctx.closePath();
+            ctx.stroke();
+          });
+          
+          // Draw frequency text if recent
+          if (shape.opacity > 0.7) {
+            ctx.fillStyle = 'white';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${shape.frequencies[0].toFixed(0)}Hz`, shape.x, shape.y);
+          }
+          
+          // Remove expired shapes
+          if (shape.lifetime >= shape.maxLifetime) {
+            shapes.splice(i, 1);
+          } else {
+            activeShapes++;
+          }
+        }
+        
+        // Draw debug text
+        ctx.fillStyle = 'white';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(`Active shapes: ${activeShapes}`, 20, 30);
+        ctx.fillText(`Canvas: ${canvas.width}x${canvas.height}`, 20, 60);
+        ctx.fillText(`Audio: ${audioEnabled ? 'ON' : 'OFF'}`, 20, 90);
+        ctx.fillText(`Harmonics: ${harmonicsTypeSelect.value} (${harmonicCountInput.value})`, 20, 120);
+        ctx.fillText(`Events: ${eventGear.getEventCountTotal()}`, 20, 150);
+        
+        // Continue animation
+        requestAnimationFrame(animate);
+      }
+      
+      // Start animation
+      updateDebugInfo('Starting animation loop');
+      requestAnimationFrame(animate);
+      
+      // Initialize audio on first click anywhere
+      document.addEventListener('click', initAudio, { once: true });
+      
+      // Update waveform display on settings change
+      function updateWaveformPreview() {
+        const baseFreq = 220;
+        const harmonicType = harmonicsTypeSelect.value;
+        const harmonicCount = parseInt(harmonicCountInput.value);
+        
+        // Generate harmonic frequencies
+        const frequencies = harmonicSeries[harmonicType](baseFreq, harmonicCount);
+        const amplitudes = frequencies.map((_, i) => 1.0 / (i + 1));
+        
+        // Update display
+        drawWaveformDisplay(frequencies, amplitudes);
+      }
+      
+      // Update on settings change
+      harmonicsTypeSelect.addEventListener('change', updateWaveformPreview);
+      harmonicCountInput.addEventListener('change', updateWaveformPreview);
+      waveformTypeSelect.addEventListener('change', updateWaveformPreview);
+      
+      // Initial preview
+      updateWaveformPreview();
+      
+      // Register app initialization with EventGear
+      eventGear.registerEvent({
+        type: 'app.initialized',
+        timestamp: performance.now()
+      });
+    });
+  </script>
+</body>
+</html> 

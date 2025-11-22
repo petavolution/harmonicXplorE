@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Harmonic Click Visualizer - Audio Debug Version</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      background-color: #000;
+      overflow: hidden;
+      color: white;
+    }
+    .menu {
+      padding: 10px;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      z-index: 10;
+    }
+    #visualizerCanvas {
+      flex-grow: 1;
+      width: 100%;
+      border: 1px solid red; /* Make canvas visible for debugging */
+    }
+    .info {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background-color: rgba(0, 0, 0, 0.7);
+      padding: 10px;
+      border-radius: 5px;
+      z-index: 10;
+    }
+    button {
+      margin: 0 5px;
+      padding: 5px 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="menu">
+    <h3>Audio Debug Version</h3>
+    <button id="audioTestButton">Test Audio</button>
+    <button id="toggleAudio">Audio: ON</button>
+  </div>
+  <canvas id="visualizerCanvas"></canvas>
+  <div class="info">
+    <div>Click canvas to create shapes with sound</div>
+    <div>Debug Info: <span id="debugInfo">Initializing...</span></div>
+  </div>
+
+  <script>
+    // Simple direct implementation with audio
+    document.addEventListener('DOMContentLoaded', () => {
+      // Debug element
+      const debugInfoElement = document.getElementById('debugInfo');
+      function updateDebugInfo(text) {
+        console.log(text);
+        debugInfoElement.textContent = text;
+      }
+      
+      updateDebugInfo('DOMContentLoaded');
+      
+      // Audio context and settings
+      let audioContext = null;
+      let audioEnabled = true;
+      
+      // Initialize audio on first user interaction (required by browsers)
+      function initAudio() {
+        if (audioContext) return;
+        
+        try {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          updateDebugInfo('Audio context initialized');
+        } catch (error) {
+          console.error('Web Audio API not supported:', error);
+          updateDebugInfo('ERROR: Audio not supported');
+          audioEnabled = false;
+        }
+      }
+      
+      // Toggle audio
+      const toggleAudioButton = document.getElementById('toggleAudio');
+      toggleAudioButton.addEventListener('click', () => {
+        audioEnabled = !audioEnabled;
+        toggleAudioButton.textContent = `Audio: ${audioEnabled ? 'ON' : 'OFF'}`;
+        updateDebugInfo(`Audio ${audioEnabled ? 'enabled' : 'disabled'}`);
+      });
+      
+      // Test audio button
+      document.getElementById('audioTestButton').addEventListener('click', () => {
+        initAudio();
+        if (audioEnabled) {
+          playSound(440, 0.5, Math.random() * 0.8 + 0.1);
+          updateDebugInfo('Audio test played');
+        }
+      });
+      
+      // Play a sound
+      function playSound(frequency, duration = 0.5, pan = 0.5) {
+        if (!audioEnabled || !audioContext) return;
+        
+        try {
+          // Create oscillator and gain node
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          
+          // Create stereo panner
+          const pannerNode = audioContext.createStereoPanner();
+          pannerNode.pan.value = (pan * 2) - 1; // Convert 0-1 to -1 to 1
+          
+          // Set up oscillator
+          oscillator.type = 'sine';
+          oscillator.frequency.value = frequency;
+          
+          // Connect nodes
+          oscillator.connect(gainNode);
+          gainNode.connect(pannerNode);
+          pannerNode.connect(audioContext.destination);
+          
+          // Apply simple envelope
+          gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+          gainNode.gain.linearRampToValueAtTime(0.7, audioContext.currentTime + 0.01);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+          
+          // Start and stop
+          oscillator.start();
+          oscillator.stop(audioContext.currentTime + duration);
+          
+          updateDebugInfo(`Sound played: ${frequency.toFixed(0)}Hz, pan: ${pan.toFixed(2)}`);
+        } catch (error) {
+          console.error('Error playing sound:', error);
+          updateDebugInfo('ERROR: Failed to play sound');
+        }
+      }
+      
+      // Canvas setup
+      const canvas = document.getElementById('visualizerCanvas');
+      if (!canvas) {
+        updateDebugInfo('ERROR: Canvas element not found!');
+        return;
+      }
+      
+      // Canvas context
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        updateDebugInfo('ERROR: Could not get canvas context!');
+        return;
+      }
+      
+      // Set canvas size
+      function resizeCanvas() {
+        const menuHeight = document.querySelector('.menu').offsetHeight;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight - menuHeight;
+        updateDebugInfo(`Canvas resized: ${canvas.width}x${canvas.height}`);
+      }
+
+      // Call resize on load and when window resizes
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas();
+      
+      // Store shapes for rendering
+      const shapes = [];
+      
+      // Create a shape with sound
+      function createShape(x, y) {
+        // Calculate frequency based on y position (higher = higher pitch)
+        const normalizedY = 1 - (y / canvas.height); // 0 at bottom, 1 at top
+        const frequency = 220 + normalizedY * 880; // 220Hz to 1100Hz
+        
+        // Calculate pan based on x position
+        const pan = x / canvas.width; // 0 at left, 1 at right
+        
+        // Play sound
+        initAudio();
+        if (audioEnabled) {
+          playSound(frequency, 0.5 + Math.random() * 0.5, pan);
+        }
+        
+        // Create visual shape
+        const colorAngle = (frequency - 220) / 880 * 360; // Map frequency to hue
+        const colorBase = `hsl(${colorAngle}, 80%, 50%)`;
+        
+        shapes.push({
+          x,
+          y,
+          radius: 20,
+          color: colorBase,
+          growth: 0.5,
+          opacity: 1,
+          lifetime: 0,
+          maxLifetime: 5, // seconds
+          frequency
+        });
+        
+        updateDebugInfo(`Shape created at (${x}, ${y}). Frequency: ${frequency.toFixed(0)}Hz`);
+      }
+      
+      // Handle clicks on canvas
+      canvas.addEventListener('click', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        createShape(x, y);
+      });
+      
+      // Animation loop
+      function animate() {
+        // Clear the canvas
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw all shapes
+        let activeShapes = 0;
+        for (let i = shapes.length - 1; i >= 0; i--) {
+          const shape = shapes[i];
+          
+          // Update shape properties
+          shape.lifetime += 1/60; // assuming 60fps
+          shape.radius += shape.growth;
+          shape.opacity = Math.max(0, 1 - (shape.lifetime / shape.maxLifetime));
+          
+          // Draw shape
+          ctx.beginPath();
+          ctx.fillStyle = shape.color.replace(')', `,${shape.opacity})`).replace('hsl', 'hsla');
+          ctx.arc(shape.x, shape.y, shape.radius, 0, Math.PI * 2);
+          ctx.fill();
+          
+          // Draw frequency text
+          if (shape.opacity > 0.7) {
+            ctx.fillStyle = 'white';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${shape.frequency.toFixed(0)}Hz`, shape.x, shape.y);
+            ctx.textAlign = 'left';
+          }
+          
+          // Remove expired shapes
+          if (shape.lifetime >= shape.maxLifetime) {
+            shapes.splice(i, 1);
+          } else {
+            activeShapes++;
+          }
+        }
+        
+        // Draw debug text
+        ctx.fillStyle = 'white';
+        ctx.font = '16px Arial';
+        ctx.fillText(`Active shapes: ${activeShapes}`, 20, 30);
+        ctx.fillText(`Canvas: ${canvas.width}x${canvas.height}`, 20, 60);
+        ctx.fillText(`Audio: ${audioEnabled ? 'ON' : 'OFF'}`, 20, 90);
+        
+        // Continue animation
+        requestAnimationFrame(animate);
+      }
+      
+      // Start animation
+      updateDebugInfo('Starting animation loop');
+      requestAnimationFrame(animate);
+      
+      // Initialize audio on first click anywhere
+      document.addEventListener('click', initAudio, { once: true });
+    });
+  </script>
+</body>
+</html> 

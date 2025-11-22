@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harmonic Explorer NG</title>
+    <style>
+        /* Reset and base styles */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        :root {
+            --primary-color: #1a1a2e;
+            --secondary-color: #e94560;
+            --accent-color: #16c79a;
+            --text-color: #f2f2f2;
+            --control-bg: rgba(15, 52, 96, 0.8);
+            --control-border: rgba(233, 69, 96, 0.6);
+            --slider-track: rgba(255, 255, 255, 0.2);
+            --slider-thumb: #e94560;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #121212;
+            color: var(--text-color);
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* Header styles */
+        .header {
+            background-color: var(--primary-color);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--secondary-color);
+            z-index: 10;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .title {
+            font-size: 1.6rem;
+            color: var(--secondary-color);
+            margin: 0;
+        }
+        
+        .subtitle {
+            font-size: 0.9rem;
+            color: var(--accent-color);
+            margin-left: 5px;
+        }
+        
+        /* Content styles */
+        .content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .visualization {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background-color: #0a0a0a;
+        }
+        
+        /* Control panel styles */
+        .controls {
+            width: 320px;
+            max-height: calc(100vh - 100px);
+            overflow-y: auto;
+            background-color: rgba(26, 26, 46, 0.95);
+            padding: 15px;
+            border-left: 2px solid var(--secondary-color);
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .control-group {
+            background-color: var(--control-bg);
+            border: 1px dashed var(--control-border);
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .control-group-title {
+            font-size: 1rem;
+            color: var(--secondary-color);
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 5px;
+        }
+        
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .control-label {
+            flex: 1;
+            min-width: 120px;
+            font-size: 0.9rem;
+            margin-right: 10px;
+        }
+        
+        /* Input styles */
+        input[type="number"], 
+        select, 
+        button,
+        input[type="color"] {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            color: white;
+            padding: 5px 8px;
+            min-width: 80px;
+            font-size: 0.9rem;
+        }
+        
+        input[type="number"] {
+            width: 80px;
+            text-align: center;
+        }
+        
+        select {
+            width: 150px;
+            appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg fill="white" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 5px top 50%;
+        }
+        
+        select option {
+            background-color: var(--primary-color);
+        }
+        
+        button {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            min-width: 100px;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: #ff5e77;
+        }
+        
+        button:active {
+            background-color: #c73950;
+            transform: translateY(1px);
+        }
+        
+        button.active {
+            background-color: var(--accent-color);
+        }
+        
+        /* Slider styles */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 5px;
+            background: var(--slider-track);
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            background: var(--slider-thumb);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 15px;
+            height: 15px;
+            background: var(--slider-thumb);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+        
+        /* Footer styles */
+        .footer {
+            background-color: var(--primary-color);
+            padding: 8px 20px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.5);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 10;
+        }
+        
+        /* Color picker container */
+        .color-control {
+            display: flex;
+            align-items: center;
+        }
+        
+        input[type="color"] {
+            width: 40px;
+            height: 25px;
+            border: none;
+            padding: 0;
+            background: none;
+        }
+        
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 100;
+        }
+        
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: var(--primary-color);
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        .modal-title {
+            color: var(--secondary-color);
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 10px;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+        }
+        
+        .modal-close:hover {
+            color: var(--secondary-color);
+        }
+        
+        /* Debug panel */
+        .debug-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #00ff00;
+            font-family: monospace;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1000;
+        }
+        
+        .debug-entry {
+            margin-bottom: 5px;
+            border-bottom: 1px solid rgba(0, 255, 0, 0.3);
+            padding-bottom: 5px;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .content {
+                flex-direction: column;
+            }
+            
+            .controls {
+                width: 100%;
+                max-height: 50vh;
+                border-left: none;
+                border-top: 2px solid var(--secondary-color);
+            }
+            
+            .control-row {
+                margin-bottom: 15px;
+            }
+            
+            .visualization {
+                flex: 2;
+            }
+        }
+        
+        /* Canvas styles */
+        .harmonic-explorer-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Audio visualizer styles */
+        .spectrum-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            height: 100px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+        }
+        
+        /* Custom numeric input with slider container */
+        .numeric-control {
+            display: flex;
+            flex-direction: column;
+            width: 150px;
+        }
+        
+        .numeric-input-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        /* Enhanced slider container styles */
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            margin: 5px 0;
+        }
+        
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+        
+        .slider-row input[type="range"] {
+            flex: 1;
+        }
+        
+        .slider-row input[type="number"] {
+            width: 70px;
+            text-align: right;
+        }
+        
+        /* Visualization canvas styles */
+        .visualization canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .visualization canvas.background-layer { z-index: 1; }
+        .visualization canvas.grid-layer { z-index: 2; }
+        .visualization canvas.harmonics-layer { z-index: 3; }
+        .visualization canvas.waveform-layer { z-index: 4; }
+        .visualization canvas.spectrum-layer { z-index: 5; }
+        .visualization canvas.overlay-layer { z-index: 6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div>
+                <h1 class="title">Harmonic Explorer <span class="subtitle">NG</span></h1>
+            </div>
+            <div>
+                <button id="toggleInfo">OFF</button>
+                <button id="toggleFPS">OFF</button>
+            </div>
+        </header>
+        
+        <main class="content">
+            <div id="visualization" class="visualization">
+                <!-- Canvas layers will be created by the renderer -->
+            </div>
+            
+            <div class="controls">
+                <!-- Display Controls -->
+                <div class="control-group">
+                    <h3 class="control-group-title">Display</h3>
+                    <div class="control-row">
+                        <button id="toggleHarmonics">ON</button>
+                        <button id="toggleWaveform">ON</button>
+                        <button id="toggleGrid">ON</button>
+                    </div>
+                </div>
+                
+                <!-- Harmonic Controls -->
+                <div class="control-group">
+                    <h3 class="control-group-title">Harmonics</h3>
+                    
+                    <div class="control-row">
+                        <label class="control-label" for="harmonicCount">Count</label>
+                        <div class="slider-container">
+                            <div class="slider-row">
+                                <input type="range" id="harmonicCount-slider" min="1" max="32" step="1" value="12">
+                                <input type="number" id="harmonicCount" min="1" max="32" step="1" value="12">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="control-row">
+                        <label class="control-label" for="harmonicType">Type</label>
+                        <select id="harmonicType">
+                            <option value="natural">Natural</option>
+                            <option value="odd">Odd</option>
+                            <option value="even">Even</option>
+                            <option value="prime">Prime</option>
+                            <option value="fibonacci">Fibonacci</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-row">
+                        <label class="control-label" for="harmonicPhase">Phase</label>
+                        <select id="harmonicPhase">
+                            <option value="0">0°</option>
+                            <option value="90">90°</option>
+                            <option value="180">180°</option>
+                            <option value="270">270°</option>
+                            <option value="random">Random</option>
+                            <option value="incremental">Incremental</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Coordinate System Controls -->
+                <div class="control-group">
+                    <h3 class="control-group-title">Coordinate System</h3>
+                    
+                    <div class="control-row">
+                        <label class="control-label" for="coordinateSystem">Type</label>
+                        <select id="coordinateSystem">
+                            <option value="polar">Polar</option>
+                            <option value="cartesian">Cartesian</option>
+                            <option value="logarithmic">Logarithmic</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-row">
+                        <label class="control-label" for="axisCount">Axis Count</label>
+                        <div class="slider-container">
+                            <div class="slider-row">
+                                <input type="range" id="axisCount-slider" min="4" max="36" step="1" value="12">
+                                <input type="number" id="axisCount" min="4" max="36" step="1" value="12">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="control-row">
+                        <label class="control-label" for="wavelength">Wavelength</label>
+                        <div class="slider-container">
+                            <div class="slider-row">
+                                <input type="range" id="wavelength-slider" min="0.1" max="5" step="0.1" value="1">
+                                <input type="number" id="wavelength" min="0.1" max="5" step="0.1" value="1">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Rotation Controls -->
+                <div class="control-group">
+                    <h3 class="control-group-title">Rotation</h3>
+                    
+                    <div class="control-row">
+                        <label class="control-label" for="rotationX">X Rotation</label>
+                        <div class="slider-container">
+                            <div class="slider-row">
+                                <input type="range" id="rotationX-slider" min="-180" max="180" step="1" value="0">
+                                <input type="number" id="rotationX" min="-180" max="180" step="1" value="0">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="control-row">
+                        <label class="control-label" for="rotationY">Y Rotation</label>
+                        <div class="slider-container">
+                            <div class="slider-row">
+                                <input type="range" id="rotationY-slider" min="-180" max="180" step="1" value="0">
+                                <input type="number" id="rotationY" min="-180" max="180" step="1" value="0">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="control-row">
+                        <label class="control-label" for="rotationZ">Z Rotation</label>
+                        <div class="slider-container">
+                            <div class="slider-row">
+                                <input type="range" id="rotationZ-slider" min="-180" max="180" step="1" value="0">
+                                <input type="number" id="rotationZ" min="-180" max="180" step="1" value="0">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="control-row">
+                        <label class="control-label">Auto Rotate</label>
+                        <button id="toggleAutoRotate">OFF</button>
+                    </div>
+                    
+                    <div class="control-row">
+                        <label class="control-label" for="speed">Speed</label>
+                        <div class="slider-container">
+                            <div class="slider-row">
+                                <input type="range" id="speed-slider" min="1" max="100" step="1" value="10">
+                                <input type="number" id="speed" min="1" max="100" step="1" value="10">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Shape Controls -->
+                <div class="control-group">
+                    <h3 class="control-group-title">Shape</h3>
+                    
+                    <div class="control-row">
+                        <label class="control-label" for="zoom">Zoom</label>
+                        <div class="slider-container">
+                            <div class="slider-row">
+                                <input type="range" id="zoom-slider" min="0.1" max="5" step="0.1" value="1">
+                                <input type="number" id="zoom" min="0.1" max="5" step="0.1" value="1">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="control-row">
+                        <button id="resetShape">Reset Shape</button>
+                    </div>
+                </div>
+                
+                <!-- Color Controls -->
+                <div class="control-group">
+                    <h3 class="control-group-title">Colors</h3>
+                    
+                    <div class="control-row">
+                        <label class="control-label" for="backgroundColor">Background</label>
+                        <div class="color-control">
+                            <input type="color" id="backgroundColor" value="#1a1a2e">
+                        </div>
+                    </div>
+                    
+                    <div class="control-row">
+                        <label class="control-label" for="foregroundColor">Foreground</label>
+                        <div class="color-control">
+                            <input type="color" id="foregroundColor" value="#e94560">
+                        </div>
+                    </div>
+                    
+                    <div class="control-row">
+                        <button id="resetColors">Reset Colors</button>
+                    </div>
+                </div>
+                
+                <!-- Audio Controls -->
+                <div class="control-group">
+                    <h3 class="control-group-title">Audio</h3>
+                    
+                    <div class="control-row">
+                        <label class="control-label">Enable Audio</label>
+                        <button id="toggleAudio">OFF</button>
+                    </div>
+                    
+                    <div class="control-row">
+                        <label class="control-label" for="baseFrequency">Base Frequency</label>
+                        <div class="slider-container">
+                            <div class="slider-row">
+                                <input type="range" id="baseFrequency-slider" min="20" max="2000" step="1" value="440">
+                                <input type="number" id="baseFrequency" min="20" max="2000" step="1" value="440">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="control-row">
+                        <label class="control-label" for="audioVolume">Volume</label>
+                        <div class="slider-container">
+                            <div class="slider-row">
+                                <input type="range" id="audioVolume-slider" min="0" max="1" step="0.01" value="0.5">
+                                <input type="number" id="audioVolume" min="0" max="1" step="0.01" value="0.5">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="control-row">
+                        <label class="control-label" for="audioAttack">Attack</label>
+                        <div class="slider-container">
+                            <div class="slider-row">
+                                <input type="range" id="audioAttack-slider" min="0" max="1" step="0.01" value="0.1">
+                                <input type="number" id="audioAttack" min="0" max="1" step="0.01" value="0.1">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="control-row">
+                        <label class="control-label" for="audioDecay">Decay</label>
+                        <div class="slider-container">
+                            <div class="slider-row">
+                                <input type="range" id="audioDecay-slider" min="0" max="1" step="0.01" value="0.05">
+                                <input type="number" id="audioDecay" min="0" max="1" step="0.01" value="0.05">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="control-row">
+                        <label class="control-label" for="oscillatorType">Oscillator</label>
+                        <select id="oscillatorType">
+                            <option value="sine">Sine</option>
+                            <option value="square">Square</option>
+                            <option value="sawtooth">Sawtooth</option>
+                            <option value="triangle">Triangle</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-row">
+                        <button id="playSequence">Play Sequence</button>
+                        <button id="playChord">Play Chord</button>
+                    </div>
+                    
+                    <div class="control-row">
+                        <button id="toggleSpectrum">OFF</button>
+                    </div>
+                </div>
+                
+                <!-- Visualization Controls -->
+                <div class="control-group">
+                    <h3 class="control-group-title">Visualization</h3>
+                    
+                    <div class="control-row">
+                        <label class="control-label" for="visualizationMode">Mode</label>
+                        <select id="visualizationMode">
+                            <option value="standard">Standard</option>
+                            <option value="rainbow">Rainbow</option>
+                            <option value="neon">Neon</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-row">
+                        <label class="control-label" for="renderQuality">Quality</label>
+                        <select id="renderQuality">
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Export Controls -->
+                <div class="control-group">
+                    <h3 class="control-group-title">Export</h3>
+                    
+                    <div class="control-row">
+                        <button id="exportImage">Export PNG</button>
+                        <button id="exportSVG">Export SVG</button>
+                    </div>
+                    
+                    <div class="control-row">
+                        <button id="saveSettings">Save Settings</button>
+                        <button id="loadSettings">Load Settings</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <footer class="footer">
+            <p>Harmonic Explorer NG - A WebAudio and Canvas Visualization</p>
+        </footer>
+    </div>
+    
+    <!-- Modal for help and settings -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <!-- Modal content will be dynamically populated -->
+        </div>
+    </div>
+    
+    <!-- Load modules in proper order -->
+    <script src="modules/EventGear.js"></script>
+    <script src="modules/HarmonicXplorerModule.js"></script>
+    <script src="modules/HarmonicXplorerCore.js"></script>
+    <script src="modules/HarmonicXplorerRenderer.js"></script>
+    <script src="modules/HarmonicXplorerAudio.js"></script>
+    <script src="modules/HarmonicXplorerUI.js"></script>
+    <script src="HarmonicXplorerNG.js"></script>
+    <script>
+        // Initialize application on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const app = new HarmonicXplorerNG();
+            app.initializeApp();
+        });
+    </script>
+</body>
+</html> 

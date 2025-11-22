@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HarmonicXplorer - EventGear Demo</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      background-color: #000;
+      overflow: hidden;
+      color: white;
+    }
+    .header {
+      padding: 10px;
+      background-color: #333;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .canvas-container {
+      display: flex;
+      flex-grow: 1;
+      position: relative;
+    }
+    #visualizerCanvas {
+      flex-grow: 1;
+      width: 100%;
+    }
+    #waveformCanvas {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 20%;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+    .control-panel {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: rgba(0, 0, 0, 0.7);
+      padding: 15px;
+      border-radius: 5px;
+      z-index: 10;
+    }
+    .metrics-panel {
+      position: absolute;
+      bottom: 25%;
+      left: 10px;
+      background-color: rgba(0, 0, 0, 0.7);
+      padding: 15px;
+      border-radius: 5px;
+      z-index: 10;
+      max-width: 300px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .debug-panel {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background-color: rgba(255, 0, 0, 0.2);
+      padding: 10px;
+      border-radius: 5px;
+      font-family: monospace;
+      z-index: 100;
+    }
+    button {
+      margin: 5px;
+      padding: 8px 12px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    select, input {
+      margin: 5px;
+      padding: 5px;
+      background-color: #444;
+      color: white;
+      border: 1px solid #555;
+      border-radius: 4px;
+    }
+    .control-group {
+      margin-bottom: 10px;
+    }
+    .slider-container {
+      display: flex;
+      align-items: center;
+    }
+    .slider-container label {
+      width: 100px;
+    }
+    .slider-container input[type="range"] {
+      flex-grow: 1;
+    }
+    .slider-container span {
+      width: 40px;
+      text-align: right;
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>HarmonicXplorer EventGear Demo</h2>
+    <div>
+      <button id="startStop">Stop Animation</button>
+      <button id="resetButton">Reset</button>
+      <button id="audioTestButton">Test Audio</button>
+    </div>
+  </div>
+
+  <div class="canvas-container">
+    <canvas id="visualizerCanvas"></canvas>
+    <canvas id="waveformCanvas"></canvas>
+    
+    <div class="control-panel">
+      <div class="control-group">
+        <label>Harmonic Type:</label>
+        <select id="harmonicType">
+          <option value="natural">Natural</option>
+          <option value="octave">Octave</option>
+          <option value="numOdd">Odd</option>
+          <option value="numEven">Even</option>
+          <option value="numPrime">Prime</option>
+          <option value="numFibo">Fibonacci</option>
+        </select>
+      </div>
+      
+      <div class="control-group">
+        <div class="slider-container">
+          <label>Harmonics:</label>
+          <input type="range" id="harmonicsSlider" min="1" max="16" value="8">
+          <span id="harmonicsValue">8</span>
+        </div>
+      </div>
+      
+      <div class="control-group">
+        <div class="slider-container">
+          <label>Frequency:</label>
+          <input type="range" id="frequencySlider" min="110" max="880" value="440">
+          <span id="frequencyValue">440 Hz</span>
+        </div>
+      </div>
+      
+      <div class="control-group">
+        <div class="slider-container">
+          <label>Rotation:</label>
+          <input type="range" id="rotationSlider" min="0" max="100" value="10">
+          <span id="rotationValue">0.1</span>
+        </div>
+      </div>
+      
+      <div class="control-group">
+        <label>
+          <input type="checkbox" id="showAudio" checked>
+          Enable Audio
+        </label>
+      </div>
+      
+      <div class="control-group">
+        <label>
+          <input type="checkbox" id="showWaveform" checked>
+          Show Waveform
+        </label>
+      </div>
+      
+      <div class="control-group">
+        <label>
+          <input type="checkbox" id="showCircle" checked>
+          Show Circle
+        </label>
+      </div>
+      
+      <div class="control-group">
+        <label>
+          <input type="checkbox" id="showHexagon" checked>
+          Show Hexagon
+        </label>
+      </div>
+    </div>
+    
+    <div class="metrics-panel">
+      <h3>EventGear Metrics</h3>
+      <div id="metricsDisplay"></div>
+    </div>
+    
+    <div class="debug-panel" id="debugPanel">
+      <div id="debugInfo">Initializing...</div>
+    </div>
+  </div>
+
+  <!-- Inline minimal EventGear implementation -->
+  <script>
+    // Minimal EventGear implementation for demo purposes
+    class EventGear {
+      constructor(timeFrame = 10, maxHistorySize = 100) {
+        this.timeFrame = timeFrame;
+        this.maxHistorySize = maxHistorySize;
+        this.isRunning = false;
+        this.startTime = 0;
+        this.totalRunningTime = 0;
+        this.eventTimestamps = [];
+        this.metadata = {};
+        this.metadataPrevious = {};
+        this.eventCount = 0;
+        this.lastEventTime = 0;
+        this.shortTermTimestamps = [];
+        this.callbackEvent = null;
+        this.callbackIntervalTime = null;
+        this.callbackMetadataChange = null;
+        this.callbackFrequency = null;
+        this.frequencyThresholdMin = 0;
+        this.frequencyThresholdMax = Infinity;
+        this.intervalTimeLength = 1000; // 1 second default
+        this.eventListeners = new Map();
+        
+        console.log("Minimal EventGear initialized for demo");
+      }
+      
+      start() {
+        if (!this.isRunning) {
+          this.isRunning = true;
+          this.startTime = performance.now();
+          console.log("EventGear started");
+        }
+        return this;
+      }
+      
+      stop() {
+        if (this.isRunning) {
+          this.isRunning = false;
+          this.totalRunningTime += (performance.now() - this.startTime) / 1000;
+          console.log("EventGear stopped");
+        }
+        return this;
+      }
+      
+      registerEvent(metadata = {}) {
+        if (!this.isRunning) return this;
+        
+        const now = performance.now();
+        
+        // Update timestamps
+        this.eventTimestamps.push(now);
+        if (this.eventTimestamps.length > this.maxHistorySize) {
+          this.eventTimestamps.shift();
+        }
+        
+        // Update short-term timestamps for calculating jitter
+        this.shortTermTimestamps.push(now);
+        if (this.shortTermTimestamps.length > 60) {
+          this.shortTermTimestamps.shift();
+        }
+        
+        // Update metadata
+        if (metadata && typeof metadata === 'object') {
+          this.metadataPrevious = { ...this.metadata };
+          this.metadata = { ...metadata };
+          
+          // Call metadata change callback if set
+          if (this.callbackMetadataChange && 
+              JSON.stringify(this.metadata) !== JSON.stringify(this.metadataPrevious)) {
+            this.callbackMetadataChange(this.metadata, this.metadataPrevious);
+          }
+        }
+        
+        // Update counters
+        this.eventCount++;
+        this.lastEventTime = now;
+        
+        // Execute event callback if set
+        if (this.callbackEvent) {
+          this.callbackEvent();
+        }
+        
+        // Check frequency thresholds
+        const currentFreq = this.getShortTermFrequency();
+        if (this.callbackFrequency && 
+            (currentFreq < this.frequencyThresholdMin || currentFreq > this.frequencyThresholdMax)) {
+          this.callbackFrequency(currentFreq);
+        }
+        
+        return this;
+      }
+      
+      linkEventListener(element, eventType) {
+        if (!element || !eventType) return this;
+        
+        const handler = (event) => {
+          this.registerEvent({
+            type: eventType,
+            target: element.id || 'unnamed-element',
+            timestamp: performance.now()
+          });
+        };
+        
+        // Store the handler reference for potential removal later
+        if (!this.eventListeners.has(element)) {
+          this.eventListeners.set(element, new Map());
+        }
+        this.eventListeners.get(element).set(eventType, handler);
+        
+        // Add the event listener
+        element.addEventListener(eventType, handler);
+        return this;
+      }
+      
+      setCallbackEvent(callback) {
+        if (typeof callback === 'function') {
+          this.callbackEvent = callback;
+        }
+        return this;
+      }
+      
+      setCallbackMetadataChange(callback) {
+        if (typeof callback === 'function') {
+          this.callbackMetadataChange = callback;
+        }
+        return this;
+      }
+      
+      setCallbackIntervalTime(intervalLength, callback) {
+        if (typeof callback === 'function' && intervalLength > 0) {
+          this.intervalTimeLength = intervalLength;
+          this.callbackIntervalTime = callback;
+          
+          // Setup interval
+          setInterval(() => {
+            if (this.isRunning && this.callbackIntervalTime) {
+              this.callbackIntervalTime(this.getTotalRunningTime() * 1000);
+            }
+          }, intervalLength);
+        }
+        return this;
+      }
+      
+      setCallbackFrequency(minThreshold, maxThreshold, callback) {
+        if (typeof callback === 'function') {
+          this.frequencyThresholdMin = minThreshold || 0;
+          this.frequencyThresholdMax = maxThreshold || Infinity;
+          this.callbackFrequency = callback;
+        }
+        return this;
+      }
+      
+      getEventCountTotal() {
+        return this.eventCount;
+      }
+      
+      getEventCountLastSecond() {
+        const now = performance.now();
+        return this.eventTimestamps.filter(ts => now - ts <= 1000).length;
+      }
+      
+      getTotalRunningTime() {
+        if (!this.isRunning) return this.totalRunningTime;
+        return this.totalRunningTime + (performance.now() - this.startTime) / 1000;
+      }
+      
+      getShortTermFrequency() {
+        if (this.shortTermTimestamps.length < 2) return 0;
+        
+        const now = performance.now();
+        const recentTimestamps = this.shortTermTimestamps.filter(ts => now - ts <= 1000);
+        
+        if (recentTimestamps.length < 2) return 0;
+        
+        // Calculate frequency based on time difference
+        return recentTimestamps.length / ((now - recentTimestamps[0]) / 1000);
+      }
+      
+      getShortTermJitter() {
+        if (this.shortTermTimestamps.length < 3) return 0;
+        
+        // Calculate intervals between timestamps
+        const intervals = [];
+        for (let i = 1; i < this.shortTermTimestamps.length; i++) {
+          intervals.push(this.shortTermTimestamps[i] - this.shortTermTimestamps[i-1]);
+        }
+        
+        // Calculate average interval
+        const avgInterval = intervals.reduce((sum, val) => sum + val, 0) / intervals.length;
+        
+        // Calculate variance
+        const variance = intervals.reduce((sum, val) => sum + Math.pow(val - avgInterval, 2), 0) / intervals.length;
+        
+        // Jitter is the standard deviation of intervals in milliseconds
+        return Math.sqrt(variance);
+      }
+      
+      on(eventType, callback) {
+        // Simplified event subscription for demo
+        this.setCallbackEvent(callback);
+        return this;
+      }
+      
+      emit(eventType, data) {
+        // Simplified event emission for demo
+        this.registerEvent({
+          type: eventType,
+          data,
+          timestamp: performance.now()
+        });
+        return this;
+      }
+      
+      setMetadata(metadata) {
+        if (metadata && typeof metadata === 'object') {
+          this.metadataPrevious = { ...this.metadata };
+          this.metadata = { ...metadata };
+        }
+        return this;
+      }
+      
+      getMetadata() {
+        return this.metadata;
+      }
+      
+      resetEventGear() {
+        this.eventTimestamps = [];
+        this.shortTermTimestamps = [];
+        this.eventCount = 0;
+        return this;
+      }
+      
+      setMaxHistorySize(size) {
+        if (size > 0) {
+          this.maxHistorySize = size;
+        }
+        return this;
+      }
+      
+      setFrameDuration() {
+        // Stub for compatibility
+        return this;
+      }
+      
+      setEventPerformanceMetricsActive() {
+        // Stub for compatibility
+        return this;
+      }
+      
+      setIndependentIntervalLength() {
+        // Stub for compatibility
+        return this;
+      }
+    }
+    
+    // Make EventGear available globally
+    window.EventGear = EventGear;
+  </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Debug logging
+      const debugPanel = document.getElementById('debugPanel');
+      const debugInfo = document.getElementById('debugInfo');
+      
+      function updateDebugInfo(text) {
+        console.log(text);
+        debugInfo.textContent = text;
+      }
+      
+      updateDebugInfo('Starting initialization...');
+      
+      // Function to initialize the app once EventGear is available
+      function initializeApp() {
+        try {
+          // Check if EventGear is available
+          if (typeof EventGear === 'undefined') {
+            updateDebugInfo('ERROR: EventGear not found. Trying again in 500ms...');
+            // Try again in 500ms
+            setTimeout(initializeApp, 500);
+            return;
+          }
+          
+          updateDebugInfo('EventGear loaded successfully');
+          
+          // ----- EventGear Setup -----
+          const eventGear = new EventGear(10, 100);
+          eventGear.start();
+          
+          updateDebugInfo('EventGear initialized');
+          
+          // Set up EventGear callbacks
+          eventGear.setCallbackEvent(() => {
+            updateDebugInfo('Event registered');
+          });
+          
+          // Set up frequency threshold monitoring
+          eventGear.setCallbackFrequency(5, 60, (frequency) => {
+            updateDebugInfo(`Frequency threshold crossed: ${frequency.toFixed(2)} Hz`);
+          });
+          
+          // Set up interval-based callback for metrics updates
+          eventGear.setCallbackIntervalTime(1000, (totalTime) => {
+            updateMetricsPanel();
+          });
+          
+          // ----- Canvas Setup -----
+          const mainCanvas = document.getElementById('visualizerCanvas');
+          const waveformCanvas = document.getElementById('waveformCanvas');
+          
+          if (!mainCanvas) {
+            updateDebugInfo('ERROR: Main canvas not found');
+            throw new Error('Main canvas not found');
+          }
+          
+          if (!waveformCanvas) {
+            updateDebugInfo('ERROR: Waveform canvas not found');
+            throw new Error('Waveform canvas not found');
+          }
+          
+          const mainCtx = mainCanvas.getContext('2d');
+          const waveformCtx = waveformCanvas.getContext('2d');
+          
+          updateDebugInfo('Canvas contexts created');
+          
+          // Resize canvases
+          function resizeCanvases() {
+            const containerRect = document.querySelector('.canvas-container').getBoundingClientRect();
+            
+            mainCanvas.width = containerRect.width;
+            mainCanvas.height = containerRect.height;
+            
+            waveformCanvas.width = containerRect.width;
+            waveformCanvas.height = containerRect.height * 0.2;
+            
+            updateDebugInfo(`Canvases resized: ${mainCanvas.width}x${mainCanvas.height}`);
+          }
+          
+          window.addEventListener('resize', resizeCanvases);
+          resizeCanvases();
+          
+          // ----- Application State -----
+          const appState = {
+            isAnimating: true,
+            harmonicsType: 'natural',
+            harmonics: 8,
+            frequency: 440,
+            rotationSpeed: 0.01,
+            rotationAngle: 0,
+            showAudio: true,
+            showWaveform: true,
+            showCircle: true,
+            showHexagon: true,
+            wavelength: 1.0,
+            lastFrameTime: 0,
+            harmonicSeries: [],
+            waveformData: []
+          };
+          
+          // ----- UI Controls -----
+          const startStopButton = document.getElementById('startStop');
+          const resetButton = document.getElementById('resetButton');
+          const audioTestButton = document.getElementById('audioTestButton');
+          const harmonicTypeSelect = document.getElementById('harmonicType');
+          const harmonicsSlider = document.getElementById('harmonicsSlider');
+          const harmonicsValue = document.getElementById('harmonicsValue');
+          const frequencySlider = document.getElementById('frequencySlider');
+          const frequencyValue = document.getElementById('frequencyValue');
+          const rotationSlider = document.getElementById('rotationSlider');
+          const rotationValue = document.getElementById('rotationValue');
+          const showAudioCheckbox = document.getElementById('showAudio');
+          const showWaveformCheckbox = document.getElementById('showWaveform');
+          const showCircleCheckbox = document.getElementById('showCircle');
+          const showHexagonCheckbox = document.getElementById('showHexagon');
+          const metricsDisplay = document.getElementById('metricsDisplay');
+          
+          // Verify UI elements
+          if (!startStopButton || !resetButton || !harmonicTypeSelect || 
+              !harmonicsSlider || !frequencySlider || !rotationSlider ||
+              !showAudioCheckbox || !showWaveformCheckbox || !showCircleCheckbox ||
+              !showHexagonCheckbox || !metricsDisplay) {
+            updateDebugInfo('ERROR: Some UI elements not found');
+            throw new Error('UI elements not found');
+          }
+          
+          updateDebugInfo('UI elements found');
+          
+          // Link UI event listeners using EventGear
+          eventGear.linkEventListener(startStopButton, 'click');
+          eventGear.linkEventListener(resetButton, 'click');
+          eventGear.linkEventListener(audioTestButton, 'click');
+          eventGear.linkEventListener(harmonicTypeSelect, 'change');
+          eventGear.linkEventListener(harmonicsSlider, 'input');
+          eventGear.linkEventListener(frequencySlider, 'input');
+          eventGear.linkEventListener(rotationSlider, 'input');
+          eventGear.linkEventListener(showAudioCheckbox, 'change');
+          eventGear.linkEventListener(showWaveformCheckbox, 'change');
+          eventGear.linkEventListener(showCircleCheckbox, 'change');
+          eventGear.linkEventListener(showHexagonCheckbox, 'change');
+          
+          updateDebugInfo('Event listeners linked');
+          
+          // Handle audio test
+          audioTestButton.addEventListener('click', () => {
+            updateDebugInfo('Audio test requested');
+            initAudio();
+            
+            if (audioContext && appState.showAudio) {
+              playSound(440, 0.5);
+              updateDebugInfo('Test sound played at 440Hz');
+            }
+          });
+          
+          // Handle UI events
+          startStopButton.addEventListener('click', () => {
+            appState.isAnimating = !appState.isAnimating;
+            startStopButton.textContent = appState.isAnimating ? 'Stop Animation' : 'Start Animation';
+            
+            eventGear.registerEvent({
+              type: 'animation.toggle',
+              isAnimating: appState.isAnimating
+            });
+            
+            if (appState.isAnimating) {
+              requestAnimationFrame(animate);
+              updateDebugInfo('Animation started');
+            } else {
+              updateDebugInfo('Animation stopped');
+            }
+          });
+          
+          resetButton.addEventListener('click', () => {
+            appState.rotationAngle = 0;
+            calculateHarmonicSeries();
+            calculateWaveform();
+            
+            eventGear.registerEvent({
+              type: 'animation.reset'
+            });
+            
+            updateDebugInfo('Animation reset');
+          });
+          
+          harmonicTypeSelect.addEventListener('change', () => {
+            appState.harmonicsType = harmonicTypeSelect.value;
+            calculateHarmonicSeries();
+            calculateWaveform();
+            
+            eventGear.registerEvent({
+              type: 'parameter.change',
+              parameter: 'harmonicsType',
+              value: appState.harmonicsType
+            });
+            
+            updateDebugInfo(`Harmonic type changed to: ${appState.harmonicsType}`);
+          });
+          
+          harmonicsSlider.addEventListener('input', () => {
+            appState.harmonics = parseInt(harmonicsSlider.value);
+            harmonicsValue.textContent = appState.harmonics;
+            calculateHarmonicSeries();
+            calculateWaveform();
+            
+            eventGear.registerEvent({
+              type: 'parameter.change',
+              parameter: 'harmonics',
+              value: appState.harmonics
+            });
+            
+            updateDebugInfo(`Harmonics count changed to: ${appState.harmonics}`);
+          });
+          
+          frequencySlider.addEventListener('input', () => {
+            appState.frequency = parseInt(frequencySlider.value);
+            frequencyValue.textContent = `${appState.frequency} Hz`;
+            
+            if (audioContext && appState.showAudio) {
+              updateAudioFrequency();
+            }
+            
+            eventGear.registerEvent({
+              type: 'parameter.change',
+              parameter: 'frequency',
+              value: appState.frequency
+            });
+            
+            updateDebugInfo(`Frequency changed to: ${appState.frequency} Hz`);
+          });
+          
+          rotationSlider.addEventListener('input', () => {
+            appState.rotationSpeed = parseInt(rotationSlider.value) / 1000;
+            rotationValue.textContent = appState.rotationSpeed.toFixed(3);
+            
+            eventGear.registerEvent({
+              type: 'parameter.change',
+              parameter: 'rotationSpeed',
+              value: appState.rotationSpeed
+            });
+            
+            updateDebugInfo(`Rotation speed changed to: ${appState.rotationSpeed.toFixed(3)}`);
+          });
+          
+          showAudioCheckbox.addEventListener('change', () => {
+            appState.showAudio = showAudioCheckbox.checked;
+            
+            if (appState.showAudio) {
+              initAudio();
+              startAudio();
+              updateDebugInfo('Audio enabled');
+            } else if (audioContext) {
+              stopAudio();
+              updateDebugInfo('Audio disabled');
+            }
+            
+            eventGear.registerEvent({
+              type: 'parameter.change',
+              parameter: 'showAudio',
+              value: appState.showAudio
+            });
+          });
+          
+          showWaveformCheckbox.addEventListener('change', () => {
+            appState.showWaveform = showWaveformCheckbox.checked;
+            waveformCanvas.style.display = appState.showWaveform ? 'block' : 'none';
+            
+            eventGear.registerEvent({
+              type: 'parameter.change',
+              parameter: 'showWaveform',
+              value: appState.showWaveform
+            });
+            
+            updateDebugInfo(`Waveform display ${appState.showWaveform ? 'enabled' : 'disabled'}`);
+          });
+          
+          showCircleCheckbox.addEventListener('change', () => {
+            appState.showCircle = showCircleCheckbox.checked;
+            
+            eventGear.registerEvent({
+              type: 'parameter.change',
+              parameter: 'showCircle',
+              value: appState.showCircle
+            });
+            
+            updateDebugInfo(`Circle display ${appState.showCircle ? 'enabled' : 'disabled'}`);
+          });
+          
+          showHexagonCheckbox.addEventListener('change', () => {
+            appState.showHexagon = showHexagonCheckbox.checked;
+            
+            eventGear.registerEvent({
+              type: 'parameter.change',
+              parameter: 'showHexagon',
+              value: appState.showHexagon
+            });
+            
+            updateDebugInfo(`Hexagon display ${appState.showHexagon ? 'enabled' : 'disabled'}`);
+          });
+          
+          // ----- Metrics Panel -----
+          function updateMetricsPanel() {
+            try {
+              const metrics = {
+                frequency: eventGear.getShortTermFrequency().toFixed(2) + ' Hz',
+                totalEvents: eventGear.getEventCountTotal(),
+                runningTime: eventGear.getTotalRunningTime().toFixed(1) + ' s',
+                lastSecond: eventGear.getEventCountLastSecond() + ' events',
+                jitter: eventGear.getShortTermJitter().toFixed(2) + ' ms'
+              };
+              
+              metricsDisplay.innerHTML = Object.entries(metrics)
+                .map(([key, value]) => `<div><strong>${key}:</strong> ${value}</div>`)
+                .join('');
+            } catch (error) {
+              updateDebugInfo(`Metrics error: ${error.message}`);
+            }
+          }
+          
+          // ----- Harmonic Series Calculation -----
+          function calculateHarmonicSeries() {
+            const count = appState.harmonics;
+            const type = appState.harmonicsType;
+            let series = [];
+            
+            try {
+              switch (type) {
+                case 'natural':
+                  // Natural harmonic series: 1, 2, 3, 4, 5, ...
+                  series = Array.from({ length: count }, (_, i) => i + 1);
+                  break;
+                  
+                case 'octave':
+                  // Octave series: 1, 2, 4, 8, 16, ...
+                  series = Array.from({ length: count }, (_, i) => Math.pow(2, i));
+                  break;
+                  
+                case 'numOdd':
+                  // Odd harmonics: 1, 3, 5, 7, ...
+                  series = Array.from({ length: count }, (_, i) => 2 * i + 1);
+                  break;
+                  
+                case 'numEven':
+                  // Even harmonics: 2, 4, 6, 8, ...
+                  series = Array.from({ length: count }, (_, i) => 2 * (i + 1));
+                  break;
+                  
+                case 'numPrime':
+                  // Prime harmonics: 2, 3, 5, 7, 11, ...
+                  series = generatePrimes(count);
+                  break;
+                  
+                case 'numFibo':
+                  // Fibonacci series: 1, 1, 2, 3, 5, 8, ...
+                  series = generateFibonacci(count);
+                  break;
+                  
+                default:
+                  series = Array.from({ length: count }, (_, i) => i + 1);
+              }
+              
+              appState.harmonicSeries = series;
+              updateDebugInfo(`Harmonic series calculated: ${series.join(', ')}`);
+              return series;
+            } catch (error) {
+              updateDebugInfo(`Error calculating harmonic series: ${error.message}`);
+              appState.harmonicSeries = Array.from({ length: count }, (_, i) => i + 1);
+              return appState.harmonicSeries;
+            }
+          }
+          
+          function isPrime(num) {
+            for (let i = 2, s = Math.sqrt(num); i <= s; i++) {
+              if (num % i === 0) return false;
+            }
+            return num > 1;
+          }
+          
+          function generatePrimes(count) {
+            const primes = [];
+            let num = 2;
+            
+            while (primes.length < count) {
+              if (isPrime(num)) {
+                primes.push(num);
+              }
+              num++;
+            }
+            
+            return primes;
+          }
+          
+          function generateFibonacci(count) {
+            if (count <= 0) return [];
+            if (count === 1) return [1];
+            
+            const fib = [1, 1];
+            for (let i = 2; i < count; i++) {
+              fib.push(fib[i-1] + fib[i-2]);
+            }
+            
+            return fib;
+          }
+          
+          // ----- Waveform Calculation -----
+          function calculateWaveform() {
+            try {
+              const points = 500;
+              const waveform = new Array(points).fill(0);
+              
+              for (let i = 0; i < appState.harmonicSeries.length; i++) {
+                const harmonic = appState.harmonicSeries[i];
+                const amplitude = 1 / harmonic;
+                
+                for (let j = 0; j < points; j++) {
+                  const x = (j / points) * 2 * Math.PI;
+                  waveform[j] += amplitude * Math.sin(harmonic * x);
+                }
+              }
+              
+              // Normalize
+              const max = Math.max(...waveform.map(v => Math.abs(v)));
+              appState.waveformData = waveform.map(v => v / max);
+              
+              updateDebugInfo(`Waveform calculated with ${points} points`);
+              return appState.waveformData;
+            } catch (error) {
+              updateDebugInfo(`Error calculating waveform: ${error.message}`);
+              appState.waveformData = Array(500).fill(0);
+              return appState.waveformData;
+            }
+          }
+          
+          // ----- Audio Synthesis -----
+          let audioContext = null;
+          let oscillators = [];
+          let gainNode = null;
+          
+          function initAudio() {
+            if (audioContext) return;
+            
+            try {
+              // Force user gesture to unlock audio context in all browsers
+              const AudioContext = window.AudioContext || window.webkitAudioContext;
+              audioContext = new AudioContext();
+              
+              // Create a silent oscillator and immediately stop it
+              // This initializes the audio context in browsers that require user gesture
+              const tempOsc = audioContext.createOscillator();
+              tempOsc.connect(audioContext.destination);
+              tempOsc.start();
+              tempOsc.stop(audioContext.currentTime + 0.001);
+              
+              // Create master gain node
+              gainNode = audioContext.createGain();
+              gainNode.gain.value = 0.2; // Master volume
+              gainNode.connect(audioContext.destination);
+              
+              updateDebugInfo('Audio context initialized and unlocked');
+            } catch (error) {
+              console.error('Web Audio API not supported:', error);
+              updateDebugInfo(`Audio error: ${error.message}`);
+              appState.showAudio = false;
+              showAudioCheckbox.checked = false;
+            }
+          }
+          
+          function playSound(frequency, duration = 0.5) {
+            if (!audioContext || !appState.showAudio) return;
+            
+            try {
+              const osc = audioContext.createOscillator();
+              const oscGain = audioContext.createGain();
+              
+              osc.type = 'sine';
+              osc.frequency.value = frequency;
+              
+              oscGain.gain.value = 0.3;
+              oscGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+              
+              osc.connect(oscGain);
+              oscGain.connect(gainNode);
+              
+              osc.start();
+              osc.stop(audioContext.currentTime + duration);
+              
+              updateDebugInfo(`Sound played at ${frequency} Hz`);
+            } catch (error) {
+              updateDebugInfo(`Error playing sound: ${error.message}`);
+            }
+          }
+          
+          function startAudio() {
+            if (!audioContext || !appState.showAudio) return;
+            
+            try {
+              stopAudio(); // Clean up any existing oscillators
+              
+              // Create oscillators for each harmonic
+              appState.harmonicSeries.forEach(harmonic => {
+                const osc = audioContext.createOscillator();
+                const oscGain = audioContext.createGain();
+                
+                osc.type = 'sine';
+                osc.frequency.value = appState.frequency * harmonic;
+                
+                // Amplitude decreases with harmonic number
+                oscGain.gain.value = 0.5 / harmonic;
+                
+                osc.connect(oscGain);
+                oscGain.connect(gainNode);
+                
+                osc.start();
+                oscillators.push({ osc, gain: oscGain });
+              });
+              
+              eventGear.registerEvent({
+                type: 'audio.start',
+                oscillatorCount: oscillators.length
+              });
+              
+              updateDebugInfo(`Audio started with ${oscillators.length} oscillators`);
+            } catch (error) {
+              updateDebugInfo(`Error starting audio: ${error.message}`);
+            }
+          }
+          
+          function stopAudio() {
+            if (!oscillators.length) return;
+            
+            try {
+              oscillators.forEach(({ osc }) => {
+                osc.stop();
+              });
+              
+              oscillators = [];
+              
+              eventGear.registerEvent({
+                type: 'audio.stop'
+              });
+              
+              updateDebugInfo('Audio stopped');
+            } catch (error) {
+              updateDebugInfo(`Error stopping audio: ${error.message}`);
+            }
+          }
+          
+          function updateAudioFrequency() {
+            if (!audioContext || !appState.showAudio) return;
+            
+            try {
+              oscillators.forEach((item, index) => {
+                const harmonic = appState.harmonicSeries[index];
+                if (harmonic) {
+                  item.osc.frequency.value = appState.frequency * harmonic;
+                }
+              });
+              
+              eventGear.registerEvent({
+                type: 'audio.frequencyUpdate',
+                baseFrequency: appState.frequency
+              });
+              
+              updateDebugInfo(`Audio frequency updated to ${appState.frequency} Hz`);
+            } catch (error) {
+              updateDebugInfo(`Error updating audio frequency: ${error.message}`);
+            }
+          }
+          
+          // ----- Rendering -----
+          function renderMainCanvas() {
+            try {
+              mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+              
+              const centerX = mainCanvas.width / 2;
+              const centerY = mainCanvas.height / 2;
+              const radius = Math.min(centerX, centerY) * 0.8;
+              
+              // Calculate sine and cosine of rotation angle
+              const sin = Math.sin(appState.rotationAngle);
+              const cos = Math.cos(appState.rotationAngle);
+              
+              // Draw circle
+              if (appState.showCircle) {
+                mainCtx.strokeStyle = '#4CAF50';
+                mainCtx.lineWidth = 2;
+                mainCtx.beginPath();
+                mainCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                mainCtx.stroke();
+              }
+              
+              // Draw hexagon
+              if (appState.showHexagon) {
+                mainCtx.strokeStyle = '#3F51B5';
+                mainCtx.lineWidth = 2;
+                mainCtx.beginPath();
+                
+                for (let i = 0; i <= 6; i++) {
+                  const angle = (i / 6) * 2 * Math.PI + appState.rotationAngle;
+                  const x = centerX + radius * Math.cos(angle);
+                  const y = centerY + radius * Math.sin(angle);
+                  
+                  if (i === 0) {
+                    mainCtx.moveTo(x, y);
+                  } else {
+                    mainCtx.lineTo(x, y);
+                  }
+                }
+                
+                mainCtx.stroke();
+              }
+              
+              // Draw harmonic points
+              mainCtx.fillStyle = '#FF9800';
+              
+              appState.harmonicSeries.forEach((harmonic, i) => {
+                // Normalize harmonic to determine radius
+                const maxHarmonic = Math.max(...appState.harmonicSeries);
+                const normalizedHarmonic = harmonic / maxHarmonic;
+                const pointRadius = radius * normalizedHarmonic;
+                
+                // Calculate angle based on index
+                const angle = (i / appState.harmonics) * 2 * Math.PI + appState.rotationAngle;
+                
+                // Calculate position
+                const x = centerX + pointRadius * Math.cos(angle);
+                const y = centerY + pointRadius * Math.sin(angle);
+                
+                // Draw point
+                mainCtx.beginPath();
+                mainCtx.arc(x, y, 8, 0, 2 * Math.PI);
+                mainCtx.fill();
+                
+                // Draw line to center
+                mainCtx.strokeStyle = `rgba(255, 152, 0, 0.5)`;
+                mainCtx.lineWidth = 1;
+                mainCtx.beginPath();
+                mainCtx.moveTo(centerX, centerY);
+                mainCtx.lineTo(x, y);
+                mainCtx.stroke();
+                
+                // Draw harmonic number
+                mainCtx.fillStyle = '#FFF';
+                mainCtx.font = '12px Arial';
+                mainCtx.textAlign = 'center';
+                mainCtx.textBaseline = 'middle';
+                mainCtx.fillText(harmonic.toString(), x, y);
+              });
+              
+              // Draw central point
+              mainCtx.fillStyle = '#F44336';
+              mainCtx.beginPath();
+              mainCtx.arc(centerX, centerY, 10, 0, 2 * Math.PI);
+              mainCtx.fill();
+              
+              // Draw frequency text
+              mainCtx.fillStyle = '#FFF';
+              mainCtx.font = '16px Arial';
+              mainCtx.textAlign = 'center';
+              mainCtx.textBaseline = 'middle';
+              mainCtx.fillText(`${appState.frequency} Hz`, centerX, centerY + radius + 30);
+            } catch (error) {
+              updateDebugInfo(`Error rendering main canvas: ${error.message}`);
+            }
+          }
+          
+          function renderWaveformCanvas() {
+            if (!appState.showWaveform) return;
+            
+            try {
+              waveformCtx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
+              
+              // Draw background
+              waveformCtx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+              waveformCtx.fillRect(0, 0, waveformCanvas.width, waveformCanvas.height);
+              
+              // Draw center line
+              waveformCtx.strokeStyle = '#666';
+              waveformCtx.lineWidth = 1;
+              waveformCtx.beginPath();
+              waveformCtx.moveTo(0, waveformCanvas.height / 2);
+              waveformCtx.lineTo(waveformCanvas.width, waveformCanvas.height / 2);
+              waveformCtx.stroke();
+              
+              // Draw waveform
+              if (appState.waveformData.length) {
+                waveformCtx.strokeStyle = '#FF4081';
+                waveformCtx.lineWidth = 2;
+                waveformCtx.beginPath();
+                
+                const centerY = waveformCanvas.height / 2;
+                const amplitude = waveformCanvas.height * 0.4;
+                
+                appState.waveformData.forEach((value, index) => {
+                  const x = (index / appState.waveformData.length) * waveformCanvas.width;
+                  const y = centerY - value * amplitude;
+                  
+                  if (index === 0) {
+                    waveformCtx.moveTo(x, y);
+                  } else {
+                    waveformCtx.lineTo(x, y);
+                  }
+                });
+                
+                waveformCtx.stroke();
+              }
+            } catch (error) {
+              updateDebugInfo(`Error rendering waveform canvas: ${error.message}`);
+            }
+          }
+          
+          // ----- Animation Loop -----
+          function animate(timestamp) {
+            if (!appState.isAnimating) return;
+            
+            try {
+              // Calculate delta time
+              const deltaTime = timestamp - appState.lastFrameTime;
+              appState.lastFrameTime = timestamp;
+              
+              // Update rotation angle
+              appState.rotationAngle += appState.rotationSpeed;
+              
+              // Render canvases
+              renderMainCanvas();
+              renderWaveformCanvas();
+              
+              // Emit animation frame event
+              eventGear.registerEvent({
+                type: 'animation.frame',
+                timestamp,
+                deltaTime
+              });
+              
+              // Continue animation loop
+              requestAnimationFrame(animate);
+            } catch (error) {
+              updateDebugInfo(`Animation error: ${error.message}`);
+              // Try to recover
+              appState.lastFrameTime = timestamp;
+              requestAnimationFrame(animate);
+            }
+          }
+          
+          // Add click handler to unlock audio on user gesture
+          document.body.addEventListener('click', function() {
+            if (appState.showAudio && !audioContext) {
+              initAudio();
+              updateDebugInfo('Audio initialized on user click');
+            }
+          }, { once: true });
+          
+          // ----- App Initialization -----
+          function init() {
+            try {
+              // Initial calculations
+              calculateHarmonicSeries();
+              calculateWaveform();
+              
+              // Note: we'll wait for user interaction before initializing audio
+              // to comply with browser autoplay policies
+              
+              // Start animation loop
+              if (appState.isAnimating) {
+                requestAnimationFrame(animate);
+              }
+              
+              // Initial metrics update
+              updateMetricsPanel();
+              
+              eventGear.registerEvent({
+                type: 'app.initialized',
+                timestamp: performance.now()
+              });
+              
+              updateDebugInfo('Initialization complete - click Test Audio button to start audio');
+              
+              // Hide debug panel after 5 seconds unless there's an error
+              setTimeout(() => {
+                if (!debugInfo.textContent.includes('ERROR')) {
+                  debugPanel.style.opacity = '0.3';
+                }
+              }, 5000);
+            } catch (error) {
+              updateDebugInfo(`Initialization error: ${error.message}`);
+            }
+          }
+          
+          // Start the application
+          init();
+          
+        } catch (error) {
+          updateDebugInfo(`CRITICAL ERROR: ${error.message}`);
+          console.error('Initialization failed:', error);
+        }
+      }
+      
+      // Initialize the app once EventGear is available
+      initializeApp();
+      
+      // Check if EventGear is initialized and initializeApp if not
+      setTimeout(() => {
+        if (typeof EventGear === 'undefined') {
+          console.error('EventGear still not initialized after all attempts. Creating minimal implementation.');
+          
+          // Create a minimal implementation of EventGear
+          window.EventGear = class EventGear {
+            constructor(options = {}) {
+              this.options = options;
+              this.events = [];
+              this.eventListeners = {};
+              this.startTime = Date.now();
+              this.isRunning = false;
+              console.log('Minimal EventGear implementation created');
+            }
+            
+            start() {
+              this.isRunning = true;
+              this.startTime = Date.now();
+              return this;
+            }
+            
+            stop() {
+              this.isRunning = false;
+              return this;
+            }
+            
+            registerEvent(eventData) {
+              const event = {
+                ...eventData,
+                timestamp: Date.now(),
+                id: this.events.length
+              };
+              this.events.push(event);
+              
+              // Call event listeners
+              const listeners = this.eventListeners[eventData.type] || [];
+              listeners.forEach(listener => {
+                try {
+                  listener(event);
+                } catch (error) {
+                  console.error('Error in event listener:', error);
+                }
+              });
+              
+              return event;
+            }
+            
+            getEventCountTotal() {
+              return this.events.length;
+            }
+            
+            getEventCountLastSecond() {
+              const now = Date.now();
+              return this.events.filter(e => now - e.timestamp < 1000).length;
+            }
+            
+            getShortTermFrequency() {
+              const eventCount = this.getEventCountLastSecond();
+              return eventCount;
+            }
+            
+            getShortTermJitter() {
+              return 0;
+            }
+            
+            getTotalRunningTime() {
+              return (Date.now() - this.startTime) / 1000;
+            }
+            
+            on(eventType, callback) {
+              if (!this.eventListeners[eventType]) {
+                this.eventListeners[eventType] = [];
+              }
+              this.eventListeners[eventType].push(callback);
+              return this;
+            }
+          };
+          
+          // Initialize app with minimal implementation
+          initializeApp();
+        }
+      }, 2000);
+    });
+  </script>
+</body>
+</html> 

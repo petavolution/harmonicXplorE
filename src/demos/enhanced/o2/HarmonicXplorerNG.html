@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harmonic Explorer NG</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        .header {
+            background-color: #212121;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+        }
+        
+        .title {
+            font-size: 1.5rem;
+            margin: 0;
+        }
+        
+        .content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .visualization {
+            flex: 1;
+            position: relative;
+            background-color: #121212;
+            overflow: hidden;
+        }
+        
+        .controls {
+            width: 300px;
+            background-color: #1e1e1e;
+            padding: 15px;
+            overflow-y: auto;
+            border-left: 1px solid #333;
+            max-height: 100%;
+            box-sizing: border-box;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #333;
+        }
+        
+        .control-group h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #333;
+            font-size: 1rem;
+            color: #4CAF50;
+        }
+        
+        .control-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .control-label {
+            flex: 1;
+            font-size: 0.9rem;
+            min-width: 100px;
+            padding-right: 8px;
+        }
+        
+        .control-input {
+            flex: 1;
+            min-width: 130px;
+        }
+        
+        input[type="number"], input[type="text"], select {
+            background-color: #333;
+            color: #e0e0e0;
+            border: 1px solid #444;
+            padding: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            border-radius: 4px;
+            height: 36px;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            margin: 8px 0;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            background: #555;
+            border-radius: 3px;
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #2196F3;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #2196F3;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        input[type="color"] {
+            background-color: #333;
+            border: 1px solid #444;
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-right: 8px;
+            vertical-align: middle;
+            cursor: pointer;
+            accent-color: #2196F3;
+        }
+        
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .checkbox-row label {
+            margin-left: 8px;
+            cursor: pointer;
+        }
+        
+        .btn {
+            background-color: #424242;
+            color: #e0e0e0;
+            border: none;
+            padding: 8px 12px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        
+        .btn:hover {
+            background-color: #4f4f4f;
+        }
+        
+        .btn:active {
+            transform: translateY(1px);
+        }
+        
+        .btn.active {
+            background-color: #2196F3;
+        }
+        
+        .footer {
+            background-color: #212121;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #333;
+            font-size: 0.8rem;
+        }
+        
+        #debugPanel {
+            height: 100px;
+            background-color: #000;
+            color: #4CAF50;
+            font-family: monospace;
+            padding: 8px;
+            overflow-y: auto;
+            font-size: 0.8rem;
+            display: none;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+        
+        .modal-content {
+            background-color: #1e1e1e;
+            margin: 10% auto;
+            padding: 20px;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 5px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: #fff;
+        }
+        
+        .canvas-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+    <!-- Load all scripts in the correct order -->
+    <script src="EventGear.js"></script>
+    <script src="modules/HarmonicXplorerCore.js"></script>
+    <script src="modules/HarmonicXplorerRenderer.js"></script>
+    <script src="modules/HarmonicXplorerAudio.js"></script>
+    <script src="modules/HarmonicXplorerUI.js"></script>
+    <!-- Load the main application script after all modules -->
+    <script src="HarmonicXplorerNG.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">Harmonic Explorer NG</h1>
+            <div>
+                <button id="startBtn" class="btn">Start</button>
+                <button id="resetBtn" class="btn">Reset</button>
+                <button id="openCalculator" class="btn">Calculator</button>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="visualization" id="visualization">
+                <!-- Canvas elements will be dynamically created here -->
+            </div>
+            
+            <div class="controls" id="controls">
+                <div class="control-group">
+                    <h3>Display</h3>
+                    <div class="control-row">
+                        <button id="geometryBtn" class="btn active">Geometry</button>
+                        <button id="waveformBtn" class="btn active">Waveform</button>
+                        <button id="audioBtn" class="btn">Audio</button>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h3>Harmonics</h3>
+                    <div class="control-row">
+                        <div class="control-label">Type:</div>
+                        <div class="control-input">
+                            <select id="harmonicType">
+                                <option value="natural">Natural</option>
+                                <option value="octave">Octave</option>
+                                <option value="odd">Odd</option>
+                                <option value="even">Even</option>
+                                <option value="prime">Prime</option>
+                                <option value="fibonacci">Fibonacci</option>
+                                <option value="upper">Upper</option>
+                                <option value="lower">Lower</option>
+                                <option value="under">Under</option>
+                                <option value="singular">Singular</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="control-row">
+                        <div class="control-label">Phase:</div>
+                        <div class="control-input">
+                            <select id="harmonicPhase">
+                                <option value="phaseFull">Full</option>
+                                <option value="phaseUp">Up</option>
+                                <option value="phaseDown">Down</option>
+                                <option value="phaseAlternate">Alternate</option>
+                                <option value="phaseRandom">Random</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="control-row">
+                        <div class="control-label">Count:</div>
+                        <div class="control-input">
+                            <input type="number" id="harmonicCount" min="1" max="32" value="8">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h3>Coordinate System</h3>
+                    <div class="control-row">
+                        <div class="control-input">
+                            <select id="coordinateSystem">
+                                <option value="radial">Radial</option>
+                                <option value="orthogonal">Orthogonal</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="control-row">
+                        <div class="control-label">Axis Count:</div>
+                        <div class="control-input">
+                            <input type="number" id="axisCount" min="3" max="24" value="6">
+                        </div>
+                    </div>
+                    <div class="control-row">
+                        <div class="control-label">Wavelength:</div>
+                        <div class="control-input">
+                            <input type="number" id="wavelength" min="0.1" max="1024" step="0.1" value="6">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h3>Rotation</h3>
+                    <div class="control-row">
+                        <div class="control-label">Angle:</div>
+                        <div class="control-input">
+                            <input type="number" id="rotation" min="-6.28" max="6.28" step="0.01" value="0">
+                        </div>
+                    </div>
+                    <div class="control-row">
+                        <div class="control-label">Speed:</div>
+                        <div class="control-input">
+                            <input type="number" id="speed" min="-128" max="128" step="0.1" value="0">
+                        </div>
+                    </div>
+                    <div class="control-row">
+                        <input type="range" id="speedSlider" min="-128" max="128" value="0">
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h3>Shape Controls</h3>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="showCircle" checked>
+                        <label for="showCircle">Circle</label>
+                        <input type="color" id="circleColor" value="#4CAF50">
+                    </div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="showHexagon" checked>
+                        <label for="showHexagon">Hexagon</label>
+                        <input type="color" id="hexagonColor" value="#2196F3">
+                    </div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="showHexagonIn" checked>
+                        <label for="showHexagonIn">Hexagon In</label>
+                        <input type="color" id="hexagonInColor" value="#1E88E5">
+                    </div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="showSquare" checked>
+                        <label for="showSquare">Square</label>
+                        <input type="color" id="squareColor" value="#9C27B0">
+                    </div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="showSquareIn" checked>
+                        <label for="showSquareIn">Square In</label>
+                        <input type="color" id="squareInColor" value="#8E24AA">
+                    </div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="showTriangle">
+                        <label for="showTriangle">Triangle</label>
+                        <input type="color" id="triangleColor" value="#FFC107">
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h3>Color Controls</h3>
+                    <div class="control-row">
+                        <div class="control-label">Background:</div>
+                        <div class="control-input">
+                            <input type="color" id="backgroundColor" value="#121212">
+                        </div>
+                    </div>
+                    <div class="control-row">
+                        <div class="control-label">Grid:</div>
+                        <div class="control-input">
+                            <input type="color" id="gridColor" value="#333333">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h3>Audio Controls</h3>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="audioEnabled">
+                        <label for="audioEnabled">Enable Audio</label>
+                    </div>
+                    <div class="control-row">
+                        <div class="control-label">Base Frequency:</div>
+                        <div class="control-input">
+                            <input type="number" id="baseFrequency" min="20" max="20000" value="440">
+                        </div>
+                    </div>
+                    <div class="control-row">
+                        <div class="control-label">Volume:</div>
+                        <div class="control-input">
+                            <input type="range" id="audioVolume" min="0" max="1" step="0.01" value="0.5">
+                        </div>
+                    </div>
+                    <div class="control-row">
+                        <div class="control-label">Attack:</div>
+                        <div class="control-input">
+                            <input type="range" id="audioAttack" min="0" max="2" step="0.01" value="0.3">
+                        </div>
+                    </div>
+                    <div class="control-row">
+                        <div class="control-label">Decay:</div>
+                        <div class="control-input">
+                            <input type="range" id="audioDecay" min="0" max="2" step="0.01" value="0.05">
+                        </div>
+                    </div>
+                    <div class="control-row">
+                        <div class="control-label">Oscillator:</div>
+                        <div class="control-input">
+                            <select id="oscillatorType">
+                                <option value="sine">Sine</option>
+                                <option value="square">Square</option>
+                                <option value="sawtooth">Sawtooth</option>
+                                <option value="triangle">Triangle</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="control-row">
+                        <button id="playSequence" class="btn">Play Sequence</button>
+                        <button id="playChord" class="btn">Play Chord</button>
+                    </div>
+                    <div class="control-row">
+                        <button id="playWaveform" class="btn">Play Waveform</button>
+                        <button id="playSweep" class="btn">Play Sweep</button>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h3>Visualization Options</h3>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="showHarmonicRepresentation">
+                        <label for="showHarmonicRepresentation">Show Harmonics</label>
+                    </div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="showWaveformCalculation">
+                        <label for="showWaveformCalculation">Show Calculation</label>
+                    </div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="showSpectrum">
+                        <label for="showSpectrum">Show Spectrum</label>
+                    </div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="showMetrics">
+                        <label for="showMetrics">Show Metrics</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <div id="animationStatus">Stopped</div>
+            <div id="metricsPanel">FPS: 0 | Frame: 0ms | Render: 0ms | Audio: 0ms</div>
+        </div>
+        
+        <div id="debugPanel"></div>
+    </div>
+    
+    <!-- Calculator Modal -->
+    <div id="calculatorModal" class="modal">
+        <div class="modal-content">
+            <span id="closeCalculator" class="close">&times;</span>
+            <h2>Waveform Calculator</h2>
+            <div>
+                <p>This calculator helps you understand how different harmonic series affect the resulting waveform.</p>
+                <div class="control-row">
+                    <div class="control-label">Base Frequency:</div>
+                    <div class="control-input">
+                        <input type="number" id="baseFrequency" min="20" max="2000" value="220" step="1">
+                    </div>
+                </div>
+                <div class="control-row">
+                    <div class="control-label">Harmonic Type:</div>
+                    <select id="calcHarmonicType">
+                        <option value="natural">Natural</option>
+                        <option value="odd">Odd</option>
+                        <option value="even">Even</option>
+                    </select>
+                </div>
+                <div class="control-row">
+                    <button id="calculateBtn" class="btn">Calculate</button>
+                </div>
+                <div id="calculationResult" style="margin-top: 20px; background-color: #333; padding: 10px; font-family: monospace;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- No need for inline script, all JavaScript is in external files -->
+</body>
+</html> 

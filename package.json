@@ -1,0 +1,22 @@
+{
+  "name": "harmonicxplorer",
+  "version": "0.5.8",
+  "description": "Real-time harmonic visualization and audio synthesis using event-driven architecture",
+  "type": "module",
+  "main": "src/main.js",
+  "scripts": {
+    "test": "node tests/test-runner.js",
+    "test:utils": "node tests/test-utils.js",
+    "test:metrics": "node tests/test-metrics.js",
+    "test:all": "node tests/test-runner.js --all"
+  },
+  "keywords": [
+    "harmonics",
+    "visualization",
+    "audio",
+    "event-driven",
+    "eventgear"
+  ],
+  "author": "Felix Mönnich, AlienVoices.de",
+  "license": "GPL"
+}

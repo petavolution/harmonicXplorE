@@ -262,10 +262,14 @@ export class DataTimestampCountBuffer {
     }
 
     addEntry(timestamp, count = 1) {
-        const currentEntry = this.buffer[this.pointer];
-        if (currentEntry && currentEntry.timestamp === timestamp) {
-            currentEntry.count += count;
+        // Check the last written entry (before current pointer)
+        const lastIndex = (this.pointer - 1 + this.maxSize) % this.maxSize;
+        const lastEntry = this.size > 0 ? this.buffer[lastIndex] : null;
+        if (lastEntry && lastEntry.timestamp === timestamp) {
+            // Combine with existing entry at same timestamp
+            lastEntry.count += count;
         } else {
+            // Write new entry at current pointer position
             this.buffer[this.pointer] = { timestamp, count };
             this.pointer = (this.pointer + 1) % this.maxSize;
             if (this.size < this.maxSize) this.size++;

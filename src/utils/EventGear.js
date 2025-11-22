@@ -5245,7 +5245,7 @@ if (typeof module !== 'undefined' && module.exports) {
 const version = '0.5.8';
 if (typeof module !== 'undefined' && module.exports) {
     module.exports.version = version; // For Node.js
-} else {
+} else if (typeof window !== 'undefined') {
     window.EventGearVersion = version; // For browser environments
 }
 

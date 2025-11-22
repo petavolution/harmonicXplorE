@@ -313,10 +313,12 @@ export class NodeBridge {
         this.#initialize();
     }
 
-    #initialize() {
+    async #initialize() {
         if (this.#nodeIsActive) {
             try {
-                this.#eventEmitter = require('events').EventEmitter;
+                // Use dynamic import for ESM compatibility
+                const events = await import('events');
+                this.#eventEmitter = events.EventEmitter;
                 this.#emitter = new this.#eventEmitter();
             } catch (error) {
                 console.error('Error setting up Node.js environment:', error);

@@ -35,13 +35,13 @@ export default class GeometryRenderer {
    * Registers event listeners
    */
   registerEvents() {
-    // Listen for animation frames
-    this.eventGear.on('render.frame', (data) => {
-      this.render(data.timestamp, data.deltaTime);
+    // Listen for animation frames (emitted by Visualizer)
+    this.eventGear.on('animation.frame', (data) => {
+      this.render(data.timestamp, data.delta);
     });
-    
-    // Listen for parameter changes
-    this.eventGear.on('ui.parameterChanged', () => {
+
+    // Listen for parameter changes (emitted by AppState)
+    this.eventGear.on('parameterChanged', () => {
       this.renderState.needsRedraw = true;
     });
     

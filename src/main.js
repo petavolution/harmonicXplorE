@@ -514,17 +514,17 @@ function setupDOMElementBinding(eventGear) {
  * @param {NeuroNetManager} neuroNetManager - Neural network manager instance
  */
 function setupNeuralNetworkIntegration(eventGear, harmonicSeries, neuroNetManager) {
-  // Listen for harmonic series updates
-  eventGear.on('harmonicsUpdated', async (data) => {
-    if (!data.harmonics || !Array.isArray(data.harmonics)) return;
+  // Listen for harmonic series updates (emitted by HarmonicSeries)
+  eventGear.on('harmonicSeries.updated', async (data) => {
+    if (!data.harmonicSeries || !Array.isArray(data.harmonicSeries)) return;
     
     // Analyze harmonic series using neural network
     try {
-      const result = await neuroNetManager.analyzeHarmonicSeries(data.harmonics);
+      const result = await neuroNetManager.analyzeHarmonicSeries(data.harmonicSeries);
       
       // Emit analysis result
       eventGear.emit('neuroNet.analysisResult', {
-        harmonics: data.harmonics,
+        harmonics: data.harmonicSeries,
         result,
         timestamp: performance.now()
       });

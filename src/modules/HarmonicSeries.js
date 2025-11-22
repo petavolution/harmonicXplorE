@@ -14,7 +14,7 @@ export default class HarmonicSeries {
     this.cache = new Map();
     
     // Listen for parameter changes that would affect harmonic series
-    this.eventGear.on('ui.parameterChanged', (data) => {
+    this.eventGear.on('parameterChanged', (data) => {
       if (['harmonics', 'harmonicsType', 'harmonicsPhase', 'init'].includes(data.key)) {
         this.updateSeries();
       }

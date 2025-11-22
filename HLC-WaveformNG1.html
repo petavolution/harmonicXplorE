@@ -1,0 +1,2282 @@
+<!DOCTYPE html>
+<html lang="en" translate="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google" content="notranslate">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <title>HLC Bubble Singularity Visualizer</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent body overflow */
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            font-family: Arial, sans-serif;
+            background-color: #000000;
+            color: #ffffff;
+        }
+        .controls-container {
+            width: 100%;
+            background-color: #333;
+            padding: 15px; /* Original padding */
+            box-sizing: border-box;
+            overflow-x: auto; /* Enable horizontal scrolling */
+            overflow-y: auto; /* Enable vertical scrolling */
+            max-height: 100px; /* Set a maximum height for vertical scrolling */
+        }
+        .controls-container::-webkit-scrollbar {
+            height: 10px; /* Height of horizontal scrollbar */
+        }
+        .controls-container::-webkit-scrollbar-thumb {
+            background-color: #888; /* Color of the scrollbar thumb */
+            border-radius: 5px;
+        }
+        .controls-container::-webkit-scrollbar-track {
+            background-color: #f1f1f1; /* Color of the scrollbar track */
+        }
+        .control-row {
+            display: flex;
+            flex-wrap: nowrap; /* Prevent wrapping */
+            gap: 10px;
+            align-items: center;
+            min-width: 1000px; /* Ensures horizontal scrolling for very small windows */
+        }
+        input, select {
+            width: 70px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #444;
+            color: #fff;
+        }
+        label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        button {
+            padding: 5px 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: bold;  /* Add this line for bold text */
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #toggleButton {
+            margin-left: auto; /* Pushes the button to the right */
+        }
+        #animationStatus {
+            font-weight: bold;
+            color: #fff;
+            min-width: 60px;   /* Ensure consistent width */
+        }
+        #licenseButton {
+            margin-left: 10px; /* Adjust this value to set space between label and button */
+        }
+        canvas {
+            border: none;  /* Remove default border */
+            outline: none; /* Remove outline */
+            width: 100%;   /* Full width */
+            height: calc(100% - 200px); /* Adjust based on your controls height (top + bottom) */
+        }
+        .shape-controls {
+            width: 100%;
+            background-color: #333;
+            padding: 15px; /* Keep original padding for bottom UI */
+            box-sizing: border-box;
+            display: flex;
+            flex-wrap: nowrap; /* Prevent wrapping */
+            justify-content: space-between; 
+            align-items: center; 
+            overflow-x: auto; /* Enable horizontal scrolling */
+        }
+        .shape-control {
+            display:flex; 
+            align-items:center; 
+        }
+        .shape-control input[type="checkbox"] {
+            margin-right :2px; 
+        }
+        .shape-control input[type="color"] {
+            width :30px;   /* Fixed width for square shape */
+            height :30px;  /* Fixed height for square shape */
+            padding :0; 
+            border-radius :0; /* Keep corners sharp for a square shape */
+            overflow:hidden; 
+            margin-left :2px; 
+            border :none; /* Remove default border for color inputs */
+            cursor :pointer; /* Change cursor to pointer for better UX */
+            -webkit-appearance:none; /* Remove default styling in WebKit browsers */
+            appearance:none; /* Remove default styling in other browsers */
+            background-color:#444; /* Fallback color when not selected */
+            box-shadow:none; /* Ensure no shadow affects the shape */
+        }
+        .shape-control input[type="checkbox"] {
+            margin-right :2px; 
+        }
+        .shape-controls input[type="color"] {
+            width :30px;   /* Fixed width for square shape */
+            height :30px;  /* Fixed height for square shape */
+            padding :0; 
+            border-radius :0; /* Keep corners sharp for a square shape */
+            overflow:hidden; 
+            margin-left :2px; 
+            border :none; /* Remove default border for color inputs */
+            cursor :pointer; /* Change cursor to pointer for better UX */
+            -webkit-appearance:none; /* Remove default styling in WebKit browsers */
+            appearance:none; /* Remove default styling in other browsers */
+            background-color:#444; /* Fallback color when not selected */
+            box-shadow:none; /* Ensure no shadow affects the shape */
+        }
+        @media (max-width :1200px) {
+            .control-row {
+                flex-wrap : wrap; /* Allow wrapping on smaller screens */
+            }
+        }
+        @media (max-width :600px) {
+            .control-row {
+                flex-direction : column; 
+                align-items : flex-start; 
+            }
+            input, select {
+                width :100%; 
+                max-width :150px; 
+            }
+        }
+        .control-group {
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+	#calcFrequency,
+	#calcKeyStepFactor,
+	#calcKeyStepSelection {
+	    width: 150px; /* Adjust this value to your desired width */
+	}
+    </style>
+</head>
+<body>
+    <div class="controls-container">
+        <div class="control-row">
+            <button id="geometryButton">Geometry</button>
+            <button id="axisButton" title="Axis Setup | Placeholder - not implemented">Axis:</button>
+            <input type="number" id="axis" value="2" step="1" min="1" max="1024" title="Axis Count">
+            <select id="coordinateSystem" title="Coordinate Sytem">
+                <option value="orthogonal">Orthogonal</option>
+                <option value="radial" selected>Radial</option>
+            </select>
+            <button id="harmonicButton" title="Advanced Harmonics & Additive Synthesis Setup">Harmonics:</button>
+            <input type="number" id="harmonics" value="3" step="1" min="1" max="64" title="Harmonics Count">
+            <select id="harmonicsType" title="Harmonic Series Type">
+                <option value="singular">Single</option>
+                <option value="natural" selected>Natural</option>
+                <option value="octave">Octave</option>
+                <option value="numOdd">Odd</option>
+                <option value="numEven">Even</option>
+                <option value="numPrime">Prime</option>
+                <option value="numFibo">Fibona</option>
+                <option value="upper">Upper</option>
+                <option value="lower">Lower</option>
+                <option value="under">Under</option>
+            </select>
+            <select id="harmonicsPhase" title="Harmonic Series Phase">
+                <option value="phaseFull" selected>Full</option>
+                <option value="phaseUp">Up</option>
+                <option value="phaseDown">Down</option>
+            </select>
+            <button id="wavelengthButton" title="Waveform Calculator">Wavelength:</button>
+            <input type="number" id="wavelength" value="6" step="0.1" min="0.1" max="1024" title="Wavelength (m)">
+            <button id="resetAngleButton" title="Reset Angle to 0">Angle:</button>
+            <input type="number" id="rotationAngleInput" value="0" step="0.01" min="-6.28" max="6.28" title="Rotation Angle">
+            <button id="animationButton" title="Animations Setup | Placeholder - not implemented">Speed:</button>
+            <input type="number" id="rotationSpeedInput" value="0.1" step="0.01" min="-128.0" max="128.0" title="Rotation Speed">
+            <input type="range" id="rotationSpeedSlider" min="-128" max="128" step="0.01" value="0.1" title="Rotation Speed">
+	    <button id="toggleButton" title="Start Rotation !!! Warning: High speeds may cause visual discomfort and can create flashing elements that may trigger seizures in people with photosensitive epilepsy.">Start</button>
+            <span id="animationStatus">Stopped</span>
+        </div>
+    </div>
+    <canvas id="canvas"></canvas>
+    <div class="shape-controls">
+        <button id="fullscreenButton" title="Full Screen Mode">Fullscreen</button>
+        <input type="number" id="zoomManual" min="0.5" max="100" step="0.1" value="1" title="Zoom">
+        <div class="shape-control">
+            <input type="checkbox" id="playAddSynth" title="Start / Stop additive synthesis"><label for="playAddSynth">Audio</label>
+        </div>                  
+        <button id="loadButton">Load</button>
+        <button id="saveButton">Save</button>
+	<select id="exportFormat">
+	    <option value="png">PNG</option>
+	    <option value="jpeg">JPEG</option>
+	    <option value="webp">WebP</option>
+	    <option value="bmp">BMP</option>
+	    <option value="gif">GIF</option>
+	</select>
+	<button id="exportButton">Export</button>
+        <button id="licenseButton">License</button>
+    </div>     
+<!-- Waveform calculator Modal-->
+<div id="calculatorModal" style="display: none; position: fixed; top: 70px; left: 0; background-color: #333; border: 0; padding: 20px; z-index: 1000; color: white; max-height: 80vh; max-width: 300px; width: fixed; overflow-y: auto;">
+    <h3 style="margin-top: 0;">Wave Calculator</h3>
+    <div class="control-group">
+        <label for="calcFrequency">Frequency (Hz):</label> 
+        <input type="number" id="calcFrequency" min="20" max="22000" step="0.1" value="57.16666666666666">
+    </div>
+    <div class="control-group">
+        <label for="calcKeyStepSelection">Key Step:</label> 
+	<select id="calcKeyStepSelection" title="Manual Key Step (t/g or Page up/down keys)">
+	    <option value="custom">Custom</option>
+	    <optgroup label="Special Intervals">
+		<option value="GoldenRatio">(φ) Golden Ratio</option>
+		<option value="PentaRatio">(2π/5)​ Pi/Penta Ratio</option>
+		<option value="HexRatio">(2/√3)​ Hex Ratio</option>
+		<option value="HexPiRatio">(6/(π*√3))​ Hex/Pi Ratio</option>
+		<option value="PiRatio">(π/3)​ Pi Ratio</option>
+	    </optgroup>
+	    <optgroup label="Western Music Intervals">
+		<option value="MinSecond">Minor Second</option>
+		<option value="MajSecond" selected>Major Second</option>
+		<option value="MinThird">Minor Third</option>
+		<option value="MajThird">Major Third</option>
+		<option value="Fourth">Perfect Fourth</option>
+		<option value="Tritone">Tritone</option>
+		<option value="Fifth">Perfect Fifth</option>
+		<option value="MinSixth">Minor Sixth</option>
+		<option value="MajSixth">Major Sixth</option>
+		<option value="MinSeventh">Minor Seventh</option>
+		<option value="MajSeventh">Major Seventh</option>
+		<option value="Octave">Octave</option>
+	    </optgroup>
+	    <optgroup label="Just Intonation">
+		<option value="JustFifth">(3/2) Just Perfect Fifth</option>
+		<option value="JustFourth">(4/3) Just Perfect Fourth</option>
+		<option value="JustMajThird">(5/4) Just Major Third</option>
+		<option value="JustMinThird">(6/5) Just Minor Third</option>
+		<option value="JustSeptThird">(7/6) Septimal Minor Third</option>
+		<option value="JustSeptWhole">(8/7) Septimal Whole Tone</option>
+		<option value="JustMajWhole">(9/8) Just Major Whole Tone</option>
+	    </optgroup>
+	</select>
+    </div>
+    <div class="control-group">
+        <input type="number" id="calcKeyStepFactor" title="Manual Key Step Factor (t/g or Page up/down keys)" min="0.01" max="10" step="0.01" value="1.122462048">
+    </div>
+    <!-- Additional parameters can be added here -->
+    <div class="control-group">
+        <button onclick="toggleModal('calculatorModal')">Close</button>
+        <button onclick="calculateKeyStepFactorApply(true)" title="Multipy Wavelength by Key Step">+</button>
+        <button onclick="calculateKeyStepFactorApply(false)" title="Divide Wavelength by Key Step">-</button>
+        <button onclick="toggleAdditiveSynthesis()" title="Switch Additve Synthesis On/Off">🔊</button>
+    </div>
+</div>
+<!-- Geometry Modal-->
+<div id="geometryModal" style="display: none; position: fixed; top: 70px; left: 0; background-color: #333; border: 0; padding: 20px; z-index: 1000; color: white; max-height: 80vh; max-width: 300px; width: fixed; overflow-y: auto;">
+    <h3 style="margin-top: 0;">Geometry</h3>
+    <div class="control-group">
+        <div class="shape-control">
+            <input type="color" id="AxisColor" value="#FFFFFF"><input type="checkbox" id="showAxis" checked><label for="showAxis">Axis</label>
+        </div>
+        <div class="shape-control">
+            <input type="color" id="circleColor" value="#FF0000"><input type="checkbox" id="showCircle" checked><label for="showCircle">Circle</label>
+        </div>
+        <div class="shape-control">
+            <input type="color" id="hexColor" value="#FFA500"><input type="checkbox" id="showHex" checked><label for="showHex">Hexagon (Out)</label>
+        </div>
+        <div class="shape-control">
+            <input type="color" id="hexInColor" value="#FFA500"><input type="checkbox" id="showHexIn" checked><label for="showHexIn">Hexagon (In)</label>
+        </div>
+        <div class="shape-control">
+            <input type="color" id="squareColor" value="#0000FF"><input type="checkbox" id="showSquare" checked><label for="showSquare">Square (Out)</label>
+        </div>
+        <div class="shape-control">
+            <input type="color" id="squareInColor" value="#0000FF"><input type="checkbox" id="showSquareIn" checked><label for="showSquareIn">Square (In)</label>
+        </div>
+        <div class="shape-control">
+            <input type="color" id="waveColor" value="#9817AC"><input type="checkbox" id="showWave" checked><label for="showWave">Wave</label>
+        </div>
+        <div class="shape-control">
+            <input type="color" id="triangleColor" value="#00FF00"><input type="checkbox" id="showTriangle" checked><label for="showTriangle">Triangle</label>
+        </div>
+        <div class="shape-control">
+            <input type="color" id="canvasBackgroundColor" value="#000000"><label for="canvasBackgroundColor">Background</label>
+        </div>
+        <div class="control-group">
+            <button onclick="toggleModal('geometryModal')">Close</button>
+        </div>
+
+    </div>
+</div>
+<!-- Additive Synthesis Controls Modal-->
+<div id="addSynthModal" style="display: none; position: fixed; top: 70px; left: 0; background-color: #333; border: 0; padding: 20px; z-index: 1000; color: white; max-height: 80vh; max-width: 300px; width: fixed; overflow-y: auto;">
+    <h3 style="margin-top: 0;">Additive Synthesis</h3>
+    <div class="control-group">
+        <label for="addSynthVolume">Volume:</label> 
+        <input type="range" id="addSynthVolume" min="0" max="1" step="0.01" value="0.5">
+    </div>
+    <div class="control-group">
+        <label for="addSynthAttack">Attack:</label> 
+        <input type="range" id="addSynthAttack" min="0" max="5" step="0.01" value="0.3">
+    </div>
+    <div class="control-group">
+        <label for="addSynthDecay">Decay:</label> 
+        <input type="range" id="addSynthDecay" min="0" max="1" step="0.01" value="0.05">
+    </div>
+    <div class="control-group">
+        <select id="addSynthOscType" title="Oscillator Type | Choose Sine for accurate additive synthesis">
+            <option value="sine">Sine</option>
+            <option value="square">Square</option>
+            <option value="sawtooth">Sawtooth</option>
+        </select> 
+    </div>
+    <!-- Additional parameters can be added here -->
+    <div class="control-group">
+        <button onclick="toggleModal('addSynthModal')">Close</button>
+        <button id="addSynthPlayButton" title="Start / Stop additive synthesis">🔊</button>
+    </div>
+</div>
+<!-- License Modal -->
+<div id="licenseModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; border: 1px solid #ccc; padding: 20px; z-index: 1000; color: black; max-height: 80vh; max-width: 700px; width: 90%; overflow-y: auto;">
+    <h2>Licensing Terms</h2>
+    <p>&copy; 2024 Felix Mönnich, AlienVoices.de. All rights reserved.</p>
+    <p>The HLC Bubble Singularity Visualizer is free for private and educational use.</p>
+    <p>Commercial or public use requires explicit authorization from the creators.</p>
+    <h3>Restrictions:</h3>
+    <ul>
+        <li>Modification and redistribution are not permitted without authorization.</li>
+        <li>Commercial use of outputs generated by this software is prohibited without authorization.</li>
+        <li>Users must comply with all applicable laws regarding data privacy and intellectual property.</li>
+    </ul>
+    <h3>Enforcement:</h3>
+    <p>Unauthorized commercial use or violation of these terms may result in:</p>
+    <ul>
+        <li>Legal action</li>
+        <li>Revocation of usage rights</li>
+        <li>Financial penalties</li>
+    </ul>
+    <h3>User Responsibilities:</h3>
+    <p>Users are responsible for ensuring compliance with these terms and any applicable laws.</p>
+    <p><strong>!!! Health and Safety Warning !!!</strong> Using the animated rotation mode with high speeds may cause visual discomfort and can create flashing elements that may trigger seizures in people with photosensitive epilepsy. Users are responsible for using this application safely and considering the health of themselves and others when using rotation features.</p>
+    <h3>Contact:</h3>
+    <p>If you have questions or need authorization, please contact us at: <strong><a href="mailto:contact@AlienVoices.de">contact@AlienVoices.de</a></strong></p>
+    <h3>Author: Felix Mönnich  |  Institution: AlienVoices.de</h3>
+    <h3>Future Note:</h3>
+    <p>Please note that future updates to this software may include changes to licensing terms,<br> including potential fees for commercial use. Stay informed by checking back for updates.</p>
+    <button onclick="toggleModal('licenseModal')">Close</button>
+</div>
+<footer style="display: none;">
+    <p>&copy; 2024 Felix Mönnich, AlienVoices.de. All rights reserved.</p>
+</footer>
+<script>
+// Block: Global declarations and variables
+    // Elements cache and params structure
+const elements = {};
+const params = {
+    zoomManual: 1,
+    wavelength: 6,
+    axis: 2,
+    coordinateSystem: 'radial',
+    harmonics: 3,
+    harmonicsType: 'natural',
+    harmonicsPhase: 'phaseFull',
+    rotationAngle: 0,
+    rotationSpeed: 0.1,
+    showAxis: true,
+    AxisColor: '#FFFFFF',
+    showCircle: true,
+    circleColor: '#FF0000',
+    showHex: true,
+    hexColor: '#FFA500',
+    showHexIn: true,
+    hexInColor: '#FFA500',
+    showSquare: true,
+    squareColor: '#0000FF',
+    showSquareIn: true,
+    squareInColor: '#0000FF',
+    showWave: true,
+    waveColor: '#9817AC', 
+    showTriangle: true,
+    triangleColor: '#00FF00',
+    canvasBackgroundColor: '#000000',
+    calcFrequency: 57.16666666666666,
+    calcKeyStepSelection: 'MajSecond',
+    calcKeyStepFactor: 1.122462048,
+    addSynthVolume: 0.5,
+    addSynthAttack: 0.3,
+    addSynthDecay: 0.05,
+    addSynthOscType: 'sine'
+};
+    // State control for Animation, Cursor hide and UI
+let isAnimating = false;	// Animation Mode active
+let zoomMinValue = 0.5;	// Zoom Minimum Boundary
+let zoomMaxValue = 100;	// Zoom Maximum Boundary
+let zoomAcceleration = 0.03;	// Zoom Acceleration Base Factor
+let zoomCurrentLevel = 1;	// Current zoom level 				!!Need implementation
+let zoomWavelength = 6;		// Adjusted wavelength for drawing logic	!!Need implementation
+let mouseTimer;			// Timer for hide mouse in Fullscreen
+let mouseHidden = false;	// Actual state of Mouse Cursor
+    // Wavelength, Frequency and Keysteps
+    // Additive Synthesis
+let audioContext = null;
+let addSynthGainNode = null;
+let AddSynths = [];
+let isAddSynthPlaying = false; 
+let addSynthLastUsed = 0;		// Last Used Synth
+const addSynthMaxSynthCount = 4;  	// Max Synth Count
+const addSynthFadeInTime = 0.05;	// Fade In Minimum
+const addSynthFadeOutTime = 0.5;        // Fade Out Time
+    // FPS Counter calculation Variables
+const frameInterval = 1000 / 60; 	// Assuming 60 FPS target
+let lastTime = 0;	
+let frameCount = 0;
+let lastFpsUpdateTime = 0;
+let currentFps = 0;
+let lastFrameTime = 0;
+    // Canvas Background image
+let imgCanvas; 				
+const imgCanvasUrl = 'canvasBack.jpg';  // The image file to check
+    // Harmonic Series Special Limits
+const maxHarmonicsOctaveDrawLimit = 10; // Max Harmonics for Octave Series
+const maxHarmonicsFiboDrawLimit = 10; 	// Max Harmonics for Fibonacci Series
+    // Cache structure for pre-calculation through function updateCacheVariables to keep drawing logic efficient
+let cachedHalfWavelength = null;
+let cachedAngleStep = null; 
+let cachedAngleSinCos = null;
+let cachedHarmonicSeries = null; 
+let cachedWaveform = null;
+let cachedRotationAngle = null;
+    // Cache Arrays for pre-calculated harmonic series on initialization
+let UPPER_HARMONICS = [];
+let LOWER_HARMONICS = [];
+let UNDER_HARMONICS = [];
+    // Consts for Decimals
+const DECIMALS_WAVELENGTH = 4;
+    // Consts for Calculations and Key Step Factors
+const SQRT_OF_TWO = Math.sqrt(2);
+const SQRT_OF_THREE = Math.sqrt(3);
+const PI_PENTA_RATIO = Math.PI * 2 / 5;
+const HEX_RATIO = 2 / SQRT_OF_THREE;
+const PI_RATIO = Math.PI / 3;
+const HEX_PI_RATIO = HEX_RATIO / PI_RATIO;
+const mediaAirSpeedOfSound = 343;
+const GOLDEN_RATIO = 1.61803398875;
+const manualKeyStepSelections = [
+    'Custom', 'GoldenRatio', 'PentaRatio', 'HexRatio','HexPiRatio', 'PiRatio',
+    'MinSecond', 'MajSecond', 'MinThird', 'MajThird', 'Fourth', 'Tritone', 'Fifth', 
+    'MinSixth', 'MajSixth', 'MinSeventh', 'MajSeventh', 'Octave', 
+    'JustFifth', 'JustFourth', 'JustMajThird', 'JustMinThird', 
+    'JustSeptThird', 'JustSeptWhole', 'JustMajWhole' 
+];
+
+let GermanKeyboardLayout = true;
+
+let manualColorArray = [
+    // Collection of colors for manual color cycling by key events
+    '#000000',   // Black
+    '#FFFFFF',   // White
+    '#FF0000',   // Red
+    '#00FF00',   // Green
+    '#0000FF',   // Blue
+    '#FFFF00',   // Yellow
+    '#FF8000',   // Orange
+    '#FF00FF',   // Magenta
+    '#00FFFF',   // Cyan
+    '#FFA500',   // Bright Orange
+    '#800080',   // Purple
+    '#008080',   // Teal
+    '#8B4513',   // Saddle Brown
+    '#A52A2A',   // Brown
+    '#D2691E',   // Chocolate
+    '#CD853F',   // Peru
+    '#DEB887'    // Burlywood
+];
+
+const manualKeyStepFactors = [
+    1,
+    GOLDEN_RATIO,
+    PI_PENTA_RATIO,
+    HEX_RATIO,
+    HEX_PI_RATIO,
+    PI_RATIO,
+    Math.pow(2, 1/12), 	// MinSecond
+    Math.pow(2, 2/12), 	// MajSecond
+    Math.pow(2, 3/12), 	// MinThird
+    Math.pow(2, 4/12), 	// MajThird
+    Math.pow(2, 5/12), 	// Fourth
+    SQRT_OF_TWO, 	// Tritone
+    Math.pow(2, 7/12), 	// Fifth
+    Math.pow(2, 8/12), 	// MinSixth
+    Math.pow(2, 9/12), 	// MajSixth
+    Math.pow(2, 10/12), // MinSeventh
+    Math.pow(2, 11/12), // MajSeventh
+    2, 			// Octave
+    3/2, 		// JustFifth
+    4/3, 		// JustFourth
+    5/4, 		// JustMajThird
+    6/5, 		// JustMinThird
+    7/6, 		// JustSeptThird
+    8/7, 		// JustSeptWhole
+    9/8 		// JustMajWhole
+];
+    // Helper Variables for Cache Structure to determine if parameters have changed and recalculation is necessary
+let lastAxis = null;
+let lastCoordinateSystem = null;
+let lastHarmonicsType = null;
+let lastHarmonicsCount = null;
+let lastHarmonicSeries = null;
+let lastHalfWaveLength = null;
+let lastRotationSpeed = null;
+    // Helper Variables to determine if sound parameter for additive Synthesis have changed
+let lastFrequency = null;
+let lastAddSynthVolume = null;
+let lastAddSynthAttack = null;
+let lastAddSynthDecay = null;
+let lastAddSynthOscType = null;
+
+    // Const for harmonic series types, phase and calculations
+const harmonicTypes = ['singular', 'natural', 'octave', 'numOdd', 'numEven', 'numPrime', 'numFibo', 'upper', 'lower', 'under'];
+const harmonicPhases = ['phaseFull', 'phaseUp', 'phaseDown'];
+
+// Block: Program initialization
+function InitCacheElements() {
+    // Cache initialization for all UI elements
+    const ids = [
+        'canvas', 'zoomManual', 'wavelengthButton', 'wavelength', 'axis', 'coordinateSystem', 
+        'harmonicButton', 'harmonics', 'harmonicsType', 'harmonicsPhase', 'rotationAngleInput', 
+        'rotationSpeedInput', 'rotationSpeedSlider', 'animationStatus', 'toggleButton', 
+        'showAxis', 'AxisColor', 'showCircle', 'circleColor', 'showHex', 'hexColor', 'showHexIn', 'hexInColor',
+        'showSquare', 'squareColor', 'showSquareIn', 'squareInColor', 'showWave', 
+        'waveColor', 'showTriangle', 'triangleColor', 'canvasBackgroundColor',
+        'fullscreenButton', 'resetAngleButton', 'loadButton', 'saveButton', 'geometryButton',
+        'exportFormat', 'exportButton', 'licenseButton', 'playAddSynth', 'addSynthVolume', 'calcKeyStepSelection', 'calcKeyStepFactor',
+        'calcFrequency', 'addSynthPlayButton','addSynthAttack', 'addSynthDecay', 'addSynthOscType'
+    ];
+    ids.forEach(id => elements[id] = document.getElementById(id));
+}
+InitCacheElements(); // initialize Elements cache
+const ctx = elements.canvas.getContext('2d'); // main drawing canvas for visualization
+
+const debounce = (func, delay) => {
+    // Debounce function
+    let timeoutId;
+    return function(...args) {
+        clearTimeout(timeoutId); // Clear the previous timeout
+        timeoutId = setTimeout(() => func.apply(this, args), delay); // Set a new timeout
+    };
+};
+
+async function programInitialization() {
+    // Init for main startup of the program
+    initHarmonicSeries();
+    updateCacheVariables();
+    updateLastSelectedParameters();
+    const imageLoaded = await loadCanvasBackgroundImage();
+    resizeCanvas(); 
+    if (!loadSettingsInitFromFileParam()) {
+        updateParams();
+    }
+}
+
+function initHarmonicSeries() {
+    // Calculate different harmonic series arrays with 64 harmonics on init
+    UPPER_HARMONICS = Array.from({length: 64}, (_, i) => (i + 2) / (i + 1));
+    LOWER_HARMONICS = Array.from({length: 64}, (_, i) => (i + 1) / (i + 2));
+    UNDER_HARMONICS = Array.from({length: 64}, (_, i) => 1 / (i + 1));
+}
+
+// Block: Update parameters and cache
+function updateParams() {
+    // Event listeners etc. call this as main update function
+    // Updates Params, Cache, Animation status and visualization
+    updateUserInterfaceElements();
+    params.zoomManual = parseFloat(elements.zoomManual.value);
+    params.axis = parseInt(elements.axis.value);
+    params.coordinateSystem = elements.coordinateSystem.value;
+    params.harmonics = parseInt(elements.harmonics.value);
+    params.harmonicsType = elements.harmonicsType.value;
+    params.harmonicsPhase = elements.harmonicsPhase.value;
+    params.wavelength = parseFloat(elements.wavelength.value);
+    params.calcFrequency = parseFloat(elements.calcFrequency.value);
+    params.calcKeyStepSelection = elements.calcKeyStepSelection.value;
+    params.calcKeyStepFactor = parseFloat(elements.calcKeyStepFactor.value);
+    params.rotationAngle = parseFloat(elements.rotationAngleInput.value);
+    params.rotationSpeed = parseFloat(elements.rotationSpeedInput.value);
+    params.showAxis = elements.showAxis.checked;
+    params.AxisColor = elements.AxisColor.value;
+    params.showCircle = elements.showCircle.checked;
+    params.circleColor = elements.circleColor.value;
+    params.showHex = elements.showHex.checked;
+    params.hexColor = elements.hexColor.value;
+    params.showHexIn = elements.showHexIn.checked;
+    params.hexInColor = elements.hexInColor.value;
+    params.showSquare = elements.showSquare.checked;
+    params.squareColor = elements.squareColor.value;
+    params.showSquareIn = elements.showSquareIn.checked;
+    params.squareInColor = elements.squareInColor.value;
+    params.showWave = elements.showWave.checked;
+    params.waveColor = elements.waveColor.value;
+    params.showTriangle = elements.showTriangle.checked;
+    params.triangleColor = elements.triangleColor.value;
+    params.canvasBackgroundColor = elements.canvasBackgroundColor.value;
+    params.addSynthVolume = parseFloat(elements.addSynthVolume.value);
+    params.addSynthAttack = parseFloat(elements.addSynthAttack.value);
+    params.addSynthDecay = parseFloat(elements.addSynthDecay.value);
+    params.addSynthOscType = elements.addSynthOscType.value;
+    updateCacheVariables();
+    updateAnimationStatus(); // Update the status display    
+    updateVisualization(performance.now());
+    if (isAddSynthPlaying && (lastHarmonicSeries !== cachedHarmonicSeries || lastFrequency !== params.calcFrequency || lastAddSynthAttack !== params.addSynthAttack || 
+            lastAddSynthDecay !== params.addSynthDecay || lastAddSynthOscType !== params.addSynthOscType || lastAddSynthVolume !== params.addSynthVolume)) {
+        updateAdditiveSynthesis(); // Update synthesis if currently playing
+    }
+    updateLastSelectedParameters();
+}
+const debouncedUpdateParams = debounce(updateParams, 40); // Debounced version of updateParams
+
+function updateUserInterfaceElements() {
+    // Adept user interface responsive to selected parameters
+    if (elements.harmonicsType.value !== lastHarmonicsType) {
+	if (elements.harmonicsType.value === 'under') {
+	    zoomMinValue='0.02';
+	} else if (elements.harmonicsType.value ==='lower') {
+	    zoomMinValue='0.2';	
+	} else {
+	    zoomMinValue='0.5';
+	}
+	elements.zoomManual.min = zoomMinValue;
+	if (parseFloat(elements.zoomManual.value) < parseFloat(elements.zoomManual.min)) {
+            elements.zoomManual.value = elements.zoomManual.min;
+	}
+    }
+}
+
+function updateCacheVariables() {
+    // Refresh Zoom and calculate zoomed Wavelength
+    zoomCurrentLevel = params.zoomManual;
+    zoomWavelength = params.wavelength * zoomCurrentLevel;
+    // Check if axis have changed and calculate AngleSteps
+    if (params.axis !== lastAxis || params.coordinateSystem !== lastCoordinateSystem) {
+        calculateAngleSteps();
+    }
+    // Check if harmonic series type or count has changed and calculate new harmonic series
+    if (params.harmonicsType !== lastHarmonicsType || params.harmonics !== lastHarmonicsCount) {
+        cachedHarmonicSeries = generateHarmonicSeries(params.harmonicsType, params.harmonics);
+    }
+    // Check if the harmonic series or HalfWavelength has changed and calculate new waveform
+    cachedHalfWavelength = (zoomWavelength / 2) * 100;
+    if (lastHarmonicSeries !== cachedHarmonicSeries || lastHalfWaveLength !== cachedHalfWavelength) {
+        cachedWaveform = calculateWaveform(cachedHarmonicSeries, cachedHalfWavelength); // Recalculate waveform
+    }
+    if (lastRotationSpeed !== params.rotationSpeed) {
+        cachedRotationAngle = params.rotationSpeed * (frameInterval / 1000);
+    }
+}
+
+function updateLastSelectedParameters() {
+    // Update last selected UI parameters for responsive recalculation
+    if (params.harmonics !== lastHarmonicsCount) {
+        lastHarmonicsCount = params.harmonics;
+    }
+    if (params.harmonicsType !== lastHarmonicsType) {
+        lastHarmonicsType = params.harmonicsType;
+    }
+    if (lastHarmonicSeries !== cachedHarmonicSeries) {
+        lastHarmonicSeries = cachedHarmonicSeries; 
+    }
+    if (lastRotationSpeed !== params.rotationSpeed) {
+        lastRotationSpeed = params.rotationSpeed;
+    }
+    if (lastHalfWaveLength !== cachedHalfWavelength) {
+        lastHalfWaveLength = cachedHalfWavelength;
+    }
+    if (lastFrequency !== params.calcFrequency) {
+        lastFrequency = params.calcFrequency;
+    }
+    if (lastAddSynthVolume !== params.addSynthVolume) {
+        lastAddSynthVolume = params.addSynthVolume;
+    }
+    if (lastAddSynthAttack !== params.addSynthAttack) {
+        lastAddSynthAttack = params.addSynthAttack;
+    }
+    if (lastAddSynthDecay !== params.addSynthDecay) {
+        lastAddSynthDecay = params.addSynthDecay;
+    }
+    if (lastAddSynthOscType !== params.addSynthOscType) {
+        lastAddSynthOscType = params.addSynthOscType;
+    }
+    if (lastAxis !== params.axis) {
+        lastAxis = params.axis;
+    }
+    if (lastCoordinateSystem !== params.coordinateSystem) {
+        lastCoordinateSystem = params.coordinateSystem;
+    }   
+}
+
+function updateWavelengthOrFrequency(idToUpdate) {
+    const update = idToUpdate === 'wavelength' 
+        ? calculateWavelengthByFrequency(parseFloat(elements['calcFrequency'].value), mediaAirSpeedOfSound)
+        : calculateFrequencyByWavelength(parseFloat(elements['wavelength'].value), mediaAirSpeedOfSound);
+    if (idToUpdate === 'wavelength') {
+        elements[idToUpdate].value = update.toFixed(DECIMALS_WAVELENGTH);
+    } else {
+        elements[idToUpdate].value = update;
+    }
+}
+
+function updateManualKeyStepFactor() {
+    if (elements.calcKeyStepSelection.value !== 'custom') {
+        params.calcKeyStepFactor = manualKeyStepFactors[manualKeyStepSelections.indexOf(elements.calcKeyStepSelection.value)];
+        elements.calcKeyStepFactor.value = params.calcKeyStepFactor;
+    }
+}
+
+// Block: Calculator Modal Functions
+function calculateFrequencyByWavelength(wavelength, waveSpeedMeterPerSecond) {
+    if (typeof wavelength !== 'number' || typeof waveSpeedMeterPerSecond !== 'number' ||
+        wavelength <= 0 || waveSpeedMeterPerSecond <= 0) {
+        throw new Error('Both wavelength and wave speed must be positive numbers');
+    }
+    const frequency = waveSpeedMeterPerSecond / wavelength;
+    return frequency;
+}
+
+function calculateWavelengthByFrequency(frequency, waveSpeedMeterPerSecond) {
+    if (typeof frequency !== 'number' || typeof waveSpeedMeterPerSecond !== 'number' ||
+        frequency <= 0 || waveSpeedMeterPerSecond <= 0) {
+        throw new Error('Both frequency and wave speed must be positive numbers');
+    }
+    const wavelength = waveSpeedMeterPerSecond / frequency;
+    return wavelength;
+}
+
+function calculateKeyStepFactorApply (UseAsFactor, KeystepPower = 1) {
+    if (UseAsFactor) {
+    	if (params.calcFrequency * Math.pow(params.calcKeyStepFactor, KeystepPower) <= 22000) {
+	    elements.calcFrequency.value = params.calcFrequency * Math.pow (params.calcKeyStepFactor, KeystepPower);
+	}
+    } else {
+        if (params.calcFrequency / Math.pow (params.calcKeyStepFactor, KeystepPower) >= 0.05) {
+	    elements.calcFrequency.value = params.calcFrequency / Math.pow(params.calcKeyStepFactor, KeystepPower);
+	}
+    }
+    updateWavelengthOrFrequency('wavelength');
+    updateParams();
+}
+
+// Block: Calculations for Axis
+function calculateAngleSteps() {
+    // Calculates the Angle steps for the coordinate system
+    const isOrthogonal = params.coordinateSystem === 'orthogonal';
+    let angleStep;
+    if (isOrthogonal) {
+        const powerIndex = POWERS_OF_TWO.findIndex(p => p >= params.axis);
+        angleStep = Math.PI / POWERS_OF_TWO[powerIndex];
+    } else {
+        angleStep = 2 * Math.PI / params.axis;
+    }
+    cachedAngleStep = angleStep;
+    cachedAngleSinCos = new Array(params.axis).fill(0).map((_, i) => {
+        const angle = i * angleStep;
+        return {
+            sin: Math.sin(angle),
+            cos: Math.cos(angle)
+        };
+    });
+}
+
+// Block: Calculation and generation of harmonics and waveforms
+// Pre-calculated arrays for the first 64 primes, Fibonacci numbers and Powers of two
+const PRIMES = [
+    2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71,
+    73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173,
+    179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281,
+    283, 293, 307, 311, 313, 317
+];
+const FIBONACCI = [
+    1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181,
+    6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418, 317811, 514229, 832040, 1346269, 2178309, 3524578, 5702887, 9227465, 14930352, 24157817, 39088169, 63245986,
+    102334155, 165580141, 267914296, 433494437, 701408733, 1134903170, 1836311903, 2971215073, 4807526976, 7778742049, 12586269025, 20365011074, 32951280099, 53316291173, 86267571272, 139583862445, 225851433717, 365435296162, 591286729879, 956722026041,
+    1548008755920, 2504730781961, 4052739537881, 6557470319842
+];
+const POWERS_OF_TWO = [
+    1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768,
+    65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824, 2147483648,
+    4294967296, 8589934592, 17179869184, 34359738368, 68719476736, 137438953472, 274877906944, 549755813888, 1099511627776, 2199023255552, 4398046511104, 8796093022208, 17592186044416, 35184372088832, 70368744177664, 140737488355328,
+    281474976710656, 562949953421312, 1125899906842624, 2251799813685248, 4503599627370496, 9007199254740992, 18014398509481984, 36028797018963968, 72057594037927936, 144115188075855872, 288230376151711744, 576460752303423488,
+    1152921504606846976, 2305843009213693952, 4611686018427387904, 9223372036854775808
+];
+
+function generateHarmonicSeries(type, count) {
+    // Generate different harmonic series based on input type and count
+    if (count < 0 || count > 64) {
+        throw new Error("Count must be between 0 and 64");
+    }
+    switch (type) {
+        case 'singular':
+            return [count];
+        case 'natural':
+            return Array.from({length: count}, (_, i) => i + 1);
+        case 'octave':
+            return POWERS_OF_TWO.slice(0, count);
+        case 'numOdd':
+            return Array.from({length: count}, (_, i) => 2 * i + 1);
+        case 'numEven':
+            return Array.from({length: count}, (_, i) => 2 * (i + 1));
+        case 'numPrime':
+            return PRIMES.slice(0, count);
+        case 'numFibo':
+            return FIBONACCI.slice(0, count);
+        case 'upper':
+            return UPPER_HARMONICS.slice(0, count);
+        case 'lower':
+            return LOWER_HARMONICS.slice(0, count);
+        case 'under':
+            return UNDER_HARMONICS.slice(0, count);
+        default:
+            throw new Error("Invalid series type");
+    }
+}
+
+function calculateWaveform(harmonicSeries, halfWavelength) {
+    // Calculates the combined waveform of the specific series
+    const numPoints = 1000; // Number of points to calculate
+    const waveform = new Array(numPoints).fill(0);
+    for (let i = 0; i < harmonicSeries.length; i++) {
+        const n = harmonicSeries[i];
+        const amplitude = halfWavelength / n; // Amplitude decreases with harmonic number
+        for (let t = 0; t < numPoints; t++) {
+            const x = (t / numPoints) * 2 * Math.PI;
+            waveform[t] += amplitude * Math.sin(n * x);
+        }
+    }
+    const maxAmplitude = Math.max(...waveform.map(Math.abs)); // Normalize waveform
+    return waveform.map(y => y / maxAmplitude * halfWavelength);
+}
+
+// Block: Drawing Loop and Logic
+function drawGeometry() {
+    // Main drawing loop that draws all aspects of the visualization and calls sub functions
+    ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
+    ctx.fillStyle = params.canvasBackgroundColor;
+    ctx.fillRect(0, 0, elements.canvas.width, elements.canvas.height);
+    if (imgCanvas && imgCanvas.complete) {drawCanvasBackground();} // Draw Canvas Background image only if present
+    const centerX = elements.canvas.width / 2;
+    const centerY = elements.canvas.height / 2;
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.rotate(params.rotationAngle);
+
+    const isOrthogonal = params.coordinateSystem === 'orthogonal';
+    // Draw coordinate system
+    if (params.showAxis) {
+        ctx.strokeStyle = params.AxisColor;
+        ctx.lineWidth = 1;
+
+        for (let i = 0; i < params.axis; i++) {
+            ctx.beginPath();
+            if (isOrthogonal) {
+                ctx.moveTo(-cachedAngleSinCos[i].cos * cachedHalfWavelength, -cachedAngleSinCos[i].sin * cachedHalfWavelength);
+                ctx.lineTo(cachedAngleSinCos[i].cos * cachedHalfWavelength, cachedAngleSinCos[i].sin * cachedHalfWavelength);
+            } else {
+                ctx.moveTo(0, 0);
+                ctx.lineTo(cachedHalfWavelength * cachedAngleSinCos[i].cos, cachedHalfWavelength * cachedAngleSinCos[i].sin);
+            }
+            ctx.stroke();
+        }
+    }
+
+    // Set style and basic line width
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.lineWidth = 2;
+    // Draw harmonics based on selected type
+    for (let i = 0; i < cachedHarmonicSeries.length; i++) {
+        const n = cachedHarmonicSeries[i];
+        // Skip the fundamental frequency for other modes
+        if (n === 1) continue;
+	// Skip higher harmonics for octave or Fibonacci Series (exponential growth)
+        if ((params.harmonicsType === 'octave' && i >= maxHarmonicsOctaveDrawLimit) ||
+            (params.harmonicsType === 'numFibo' && i >= maxHarmonicsFiboDrawLimit)) {
+            continue;
+        }
+        // Calculate radius and inner size for both singular and other modes
+        const radius = (cachedHalfWavelength / n);
+        const innerSize = radius * SQRT_OF_TWO;
+        for (let j = 0; j < n; j++) {
+	    if ((params.harmonicsType === 'upper' || params.harmonicsType === 'lower' || params.harmonicsType === 'under') && j!==0) {
+		continue; //Skip the inner geometry aspects for special series 
+            }
+            const centerOffset = (-1 + (1 / n) + j * (2 / n)) * cachedHalfWavelength;
+            for (let k = 0; k < params.axis; k++) {
+                const angle = k * cachedAngleStep;
+                const x = centerOffset * cachedAngleSinCos[k].cos;
+                const y = centerOffset * cachedAngleSinCos[k].sin;
+                // Check if in singular mode and if this is not the selected harmonic
+                if (!(params.harmonicsType === 'singular' && n !== params.harmonics)) {
+                    drawShape(x, y, radius, angle, innerSize, j); // Draw shapes for harmonics
+                }                
+            }
+        }
+    }   
+    // Draw fundamental frequency elements
+    const fundamentalRadius = cachedHalfWavelength;
+    const fundamentalInnerSize = fundamentalRadius * SQRT_OF_TWO;
+    for (let k = 0; k < params.axis; k++) {
+        const angle = k * cachedAngleStep;
+        if (params.harmonicsType !== 'singular' || params.harmonics === 1) {
+            drawShape(0, 0, fundamentalRadius, angle, fundamentalInnerSize, 0);
+        }
+	if (params.harmonicsType !== 'singular') { //No overall triangle cone for singular harmonics
+            drawTriangles(0, 0, fundamentalRadius, angle);
+        }
+        if (params.showWave) {
+            drawWaveform(0, 0, angle, cachedHalfWavelength, params.waveColor);
+        }
+    }
+    ctx.restore();
+}
+
+function drawWaveform(centerX, centerY, angle, halfWavelength, color) {
+    // Draws the combined Waveform of the selected harmonics
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.rotate(angle);
+
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+
+    const drawSingleWave = (mirror = false) => {
+        for (let i = 0; i < cachedWaveform.length; i++) {
+            const x = (i / cachedWaveform.length - 0.5) * halfWavelength * 2;
+            const y = mirror ? cachedWaveform[i] : -cachedWaveform[i]; // Mirror if needed
+
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+    };
+    // Draw based on phase mode
+    if (params.harmonicsPhase === "phaseFull") {
+        drawSingleWave(); // Original
+        drawSingleWave(true); // Mirrored
+    } else if (params.harmonicsPhase === "phaseUp") {
+        drawSingleWave(); // Original
+    } else { // phaseDown
+        drawSingleWave(true); // Only mirrored
+    }
+    ctx.stroke();
+    ctx.restore();
+}
+
+function drawTriangles(x, y, radius, angle) {
+    // Draws the overall cones that show the harmonics inter-connections
+    if (!params.showTriangle) return;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+
+    ctx.strokeStyle = params.triangleColor;
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+    ctx.moveTo(-radius, 0);
+    ctx.lineTo(radius * 0.5, -radius * 0.5);
+    ctx.lineTo(radius * 0.5, radius * 0.5);
+    ctx.closePath();
+    ctx.stroke();
+    
+    if (params.harmonicsPhase === "phaseFull") {
+        ctx.beginPath();
+	ctx.moveTo(radius, 0);
+	ctx.lineTo(-radius * 0.5, radius * 0.5);
+	ctx.lineTo(-radius * 0.5, -radius * 0.5);
+	ctx.closePath();
+	ctx.stroke();
+    }
+    ctx.restore();
+}
+
+function drawShape(x, y, radius, angle, innerSize, shapeIndex) {
+    // Draws the different geometric shapes representing the aspects of harmonics
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);   
+    const isUpper = (shapeIndex % 2 === 0) ^ (params.harmonicsPhase === "phaseDown");
+    if (params.showSquare) {
+        ctx.beginPath();
+        if (params.harmonicsPhase === "phaseFull") {
+            ctx.rect(-radius, -radius, radius * 2, radius * 2);
+        } else {
+            if (isUpper) {
+                ctx.rect(-radius, -radius, radius * 2, radius);
+            } else {
+                ctx.rect(-radius, 0, radius * 2, radius);
+            }
+        }
+        ctx.strokeStyle = params.squareColor;
+        ctx.stroke();
+    }    
+    if (params.showSquareIn) {
+        ctx.rotate(Math.PI / 4);
+        ctx.beginPath();
+        if (params.harmonicsPhase === "phaseFull") {
+            ctx.rect(-innerSize / 2, -innerSize / 2, innerSize, innerSize);
+        } else {
+            if (isUpper) {
+                ctx.moveTo(-innerSize / 2, -innerSize / 2);
+                ctx.lineTo(innerSize / 2, -innerSize / 2);
+                ctx.lineTo(-innerSize / 2, innerSize / 2);
+            } else {
+                ctx.moveTo(innerSize / 2, innerSize / 2);
+                ctx.lineTo(-innerSize / 2, innerSize / 2);
+                ctx.lineTo(innerSize / 2, -innerSize / 2);
+            }
+            ctx.closePath();
+        }
+        ctx.strokeStyle = params.squareInColor;
+        ctx.stroke();
+        ctx.rotate(-Math.PI / 4);
+    }
+    if (params.showHex) {
+        ctx.beginPath();
+        ctx.strokeStyle = params.hexColor;
+
+        const outerRadius = radius * (HEX_RATIO); // Radius to make outer hex touch inner hex vertices
+        const rotationOffset = PI_RATIO / 2; // 30 degree rotation
+
+        if (params.harmonicsPhase === "phaseFull") {
+            for (let i = 0; i < 6; i++) {
+                const hexAngle = rotationOffset + PI_RATIO * i;
+                ctx.lineTo(outerRadius * Math.cos(hexAngle), outerRadius * Math.sin(hexAngle));
+            }
+            ctx.closePath();
+        } else {
+            const startAngle = !isUpper ? 0 : Math.PI;
+            ctx.moveTo(-radius, 0);
+            ctx.lineTo(-radius, isUpper ? -outerRadius/2 : outerRadius/2);
+            ctx.moveTo(outerRadius * Math.cos(rotationOffset + startAngle), outerRadius * Math.sin(rotationOffset + startAngle));
+            ctx.lineTo(outerRadius * Math.cos(rotationOffset + startAngle + PI_RATIO), outerRadius * Math.sin(rotationOffset + startAngle + PI_RATIO));
+            ctx.lineTo(outerRadius * Math.cos(rotationOffset + startAngle + 2 * PI_RATIO), outerRadius * Math.sin(rotationOffset + startAngle + 2 * PI_RATIO));
+            ctx.moveTo(radius, 0);
+            ctx.lineTo(radius, isUpper ? -outerRadius/2 : outerRadius/2);
+        }
+        ctx.stroke();
+    }
+    if (params.showHexIn) {
+        ctx.beginPath();
+        ctx.strokeStyle = params.hexInColor;
+        if (params.harmonicsPhase === "phaseFull") {
+            for (let i = 0; i < 6; i++) {
+                const angle = PI_RATIO * i;
+                ctx.lineTo(radius * Math.cos(angle), radius * Math.sin(angle));
+            }
+            ctx.closePath();
+        } else {
+            const startAngle = isUpper ? Math.PI : 0;
+            for (let i = 0; i <= 3; i++) {
+                const angle = startAngle + PI_RATIO * i;
+                if (i === 0) {
+                    ctx.moveTo(radius * Math.cos(angle), radius * Math.sin(angle));
+                } else {
+                    ctx.lineTo(radius * Math.cos(angle), radius * Math.sin(angle));
+                }
+            }
+        }
+        ctx.stroke();
+    }
+    if (params.showCircle) {
+        ctx.beginPath();
+        if (params.harmonicsPhase === "phaseFull") { 
+            ctx.arc(0, 0, radius, 0, 2 * Math.PI);
+        } else {
+            ctx.arc(0, 0, radius, !isUpper ? 0 : Math.PI, !isUpper ? Math.PI : 2 * Math.PI);
+        }        
+        ctx.strokeStyle = params.circleColor;
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
+// Block: Responsive Design
+function resizeCanvas() {
+    // Resize UI Elements for responsive Design
+    if (!cachedAngleSinCos) { //First init vars
+        updateCacheVariables();
+        updateLastSelectedParameters();
+    }
+    const availableWidth = window.innerWidth;
+    // Get the height of the top controls container
+    const topControlsContainer = document.querySelector('.controls-container'); // Use the provided class name
+    const topControlsHeight = topControlsContainer ? topControlsContainer.offsetHeight : 0;
+    // Get the height of the bottom controls container
+    const bottomControlsContainer = document.querySelector('.shape-controls'); // Use the provided class name
+    const bottomControlsHeight = bottomControlsContainer ? bottomControlsContainer.offsetHeight : 0;
+    let availableHeight = document.fullscreenElement ? window.innerHeight : window.innerHeight - topControlsHeight - bottomControlsHeight;
+    elements.canvas.style.width = `${availableWidth}px`;
+    elements.canvas.style.height = `${availableHeight}px`;
+    elements.canvas.width = availableWidth;
+    elements.canvas.height = availableHeight;
+    // Position the canvas below the top controls
+    elements.canvas.style.position = 'absolute';
+    elements.canvas.style.left = '0px';
+    elements.canvas.style.top = `${topControlsHeight}px`;
+    // Ensure bottom controls stay at the bottom (if needed)
+    if (bottomControlsContainer) {
+        bottomControlsContainer.style.position = 'absolute';
+        bottomControlsContainer.style.bottom = '0';
+        bottomControlsContainer.style.left = '0';
+        bottomControlsContainer.style.width = '100%';
+    }
+    positionModal('addSynthModal', topControlsHeight);
+    positionModal('geometryModal', topControlsHeight);
+    positionModal('calculatorModal', topControlsHeight);
+    drawCanvasBackground();
+    updateVisualization(performance.now());
+}
+
+// Block: Visualization State and Status Control
+function updateVisualization(currentTime) {
+    // Updates the visualization and calculates FPS for animation
+    if (currentTime - lastFrameTime < frameInterval) {
+        requestAnimationFrame(updateVisualization);
+        return;
+    }
+    // FPS calculation
+    frameCount++;
+    if (currentTime - lastFpsUpdateTime > 1000) { // Update FPS every second
+        currentFps = Math.round((frameCount * 1000) / (currentTime - lastFpsUpdateTime));
+        frameCount = 0;
+        lastFpsUpdateTime = currentTime;
+        updateAnimationStatus(); // Update the status display
+    }
+    lastFrameTime = currentTime;
+    if (isAnimating) {
+        params.rotationAngle += cachedRotationAngle;
+        params.rotationAngle %= (Math.PI * 2);
+        elements.rotationAngleInput.value = params.rotationAngle.toFixed(3);
+    }
+    drawGeometry(); // Always draw, whether animating or not
+    requestAnimationFrame(updateVisualization);
+}
+
+function toggleVisualization() {
+    // Toggles animation mode on/off and updates ui
+    if (isAnimating) {
+        isAnimating = false;
+        elements.toggleButton.textContent = 'Start';
+        updateAnimationStatus();
+    } else {
+        isAnimating = true;
+        elements.toggleButton.textContent = 'Stop';
+        frameCount = 0;
+        lastFpsUpdateTime = performance.now();
+        requestAnimationFrame(updateVisualization);
+        updateAnimationStatus();
+    }
+}
+
+function updateAnimationStatus() {
+    // Updates the animation status with FPS counter
+    if (isAnimating) {
+        elements.animationStatus.textContent = `FPS: ${currentFps}`;
+    } else {
+        elements.animationStatus.textContent = 'Stopped';
+    }
+}
+
+function cycleColor(colorInput) {
+    // Cycles through the colors of manualColorArray for a given colorInput element
+    let indexChange = manualColorArray.indexOf(colorInput.value.toUpperCase()); // Find index of color in array
+    if (indexChange === -1) {
+        indexChange = 0; //If not found, start from the first color in the array
+    } 
+    indexChange = (indexChange + 1) % manualColorArray.length;
+    colorInput.value = manualColorArray[indexChange];
+    updateParams();
+}
+
+// Block: Optional Canvas Background image
+function loadCanvasBackgroundImage() {
+    // Load the canvas background image and return promise when loaded completely or failed
+    return new Promise((resolve) => {
+        imgCanvas = new Image(); 
+        const xhr = new XMLHttpRequest(); // Check if the image exists using a HEAD request
+        xhr.open('HEAD', imgCanvasUrl, true);
+        xhr.onload = function() {
+            if (xhr.status === 200) { // File exists
+                imgCanvas.src = imgCanvasUrl;
+                imgCanvas.onload = function() {
+                    resolve(true); 
+                };
+                imgCanvas.onerror = function() {
+                    resolve(true);
+                };
+            } else {
+                resolve(true);
+            }
+        };
+        xhr.onerror = function() {
+            resolve(true); 
+        };
+        xhr.send();
+    });
+}
+
+function drawCanvasBackground() {
+    // Draw the background image on the canvas, if loaded
+    const keepRatioOfImg = false;
+    if (!imgCanvas || !imgCanvas.complete) {
+        return; 
+    }
+    if (keepRatioOfImg) {
+        const aspectRatio = imgCanvas.width / imgCanvas.height;
+        const canvasAspectRatio = ctx.canvas.width / ctx.canvas.height;
+        let drawWidth, drawHeight;
+        if (aspectRatio > canvasAspectRatio) {
+            drawWidth = ctx.canvas.width;
+            drawHeight = drawWidth / aspectRatio;
+        } else {
+            drawHeight = ctx.canvas.height;
+            drawWidth = drawHeight * aspectRatio;
+        }
+        const xOffset = (ctx.canvas.width - drawWidth) / 2;
+        const yOffset = (ctx.canvas.height - drawHeight) / 2;    
+        ctx.drawImage(imgCanvas, xOffset, yOffset, drawWidth, drawHeight);
+    } else {
+        ctx.drawImage(imgCanvas, 0, 0, ctx.canvas.width, ctx.canvas.height);
+    }
+}
+
+// Block: Fullscreen and Mouse Hide functionality
+function toggleFullscreen () {
+    // Toggle between fullscreen with hiding of UI and normal mode 
+    if (!document.fullscreenElement) { 
+     	elements.canvas.requestFullscreen().catch(err => console.log(err));
+     	// Hide UI when entering fullscreen
+        closeAllModals();	
+	resetMouseTimer ();
+	toggleUI (false);
+	resizeCanvas();
+    } else{
+    	document.exitFullscreen();
+    	// Show UI when exiting fullscreen
+	forceShowUIwithCursor();
+	resizeCanvas();
+    }
+}
+
+function toggleUI (showUI) {
+    if (showUI) {
+	document.querySelector('.controls-container').style.display='flex';
+	document.querySelector('.shape-controls').style.display='flex';
+    } else {
+	document.querySelector('.controls-container').style.display='none';
+	document.querySelector('.shape-controls').style.display='none';
+    }
+}
+
+function showUIwithCursor() {
+    if (!document.fullscreenElement) {
+    	forceShowUIwithCursor();
+    }
+}
+
+function forceShowUIwithCursor() {
+    toggleUI (true);
+    toggleCursor (true);
+    clearTimeout (mouseTimer); 
+    resizeCanvas();
+}
+
+function toggleCursor(showCursor) {
+    // Show or Hide Mouse cursor for fullscreen mode
+    if (showCursor === !mouseHidden) return;
+    if (!document.fullscreenElement && !showCursor && !mouseHidden) return; //Hide only in Fullscreen
+    document.body.style.cursor = showCursor ? 'default' : 'none';
+    mouseHidden = !showCursor;
+}
+
+function resetMouseTimer() {
+    // Reset the mouse timer in fullscreen mode
+    if (document.fullscreenElement) {
+    	clearTimeout(mouseTimer);
+    	toggleCursor(true); // Show cursor immediately on mouse move
+    	mouseTimer = setTimeout(() => toggleCursor(false), 5000);
+    }
+}
+
+// Block: Additive Synthesis
+class AdditiveSynthesizer {
+    // Additive Synthesizer Class with independent state control	
+    constructor(audioContext) {
+        this.audioContext = audioContext;
+        this.gainNode = this.audioContext.createGain();
+        this.oscillators = [];
+        this.isPlaying = false;
+        this.masterGainNode = null;
+    }
+
+    start(controlParams, harmonicSeries, masterGainNode) {
+        if (!this.isPlaying) {
+            this.isPlaying = true;
+            this.masterGainNode = masterGainNode;
+            this.update(controlParams, harmonicSeries);
+            this.gainNode.connect(this.masterGainNode);
+        }
+    }
+
+    stop() {
+        return new Promise((resolve) => {
+            if (this.isPlaying) {
+                this.oscillators.forEach(osc => {
+                    osc.gain.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + addSynthFadeOutTime);
+                });
+                this.gainNode.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + addSynthFadeOutTime);
+                setTimeout(() => {
+                    this.clearOscillators();
+                    this.gainNode.disconnect();
+                    this.isPlaying = false;
+                    resolve(); // Resolve the promise when everything is cleaned up
+                }, (addSynthFadeOutTime * 1000));
+            } else {
+                resolve(); // If not playing, resolve immediately
+            }
+        });
+    }
+
+    clearOscillators() {
+        const fadeOutTime = 0.015; // Slightly longer fade-out
+        const stopDelay = 0.015; // Small delay before stopping
+        this.oscillators.forEach(osc => {
+            const now = this.audioContext.currentTime;
+            const stopTime = now + fadeOutTime + stopDelay;
+
+            // Create a low-pass filter
+            const filter = this.audioContext.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(osc.oscillator.frequency.value * 5, now); // Start higher
+            filter.frequency.exponentialRampToValueAtTime(10, stopTime);
+
+            // Reconnect through the filter
+            osc.gain.disconnect();
+            osc.gain.connect(filter);
+            filter.connect(this.gainNode);
+
+            // Exponential fade out
+            osc.gain.gain.setValueAtTime(osc.gain.gain.value, now);
+            osc.gain.gain.exponentialRampToValueAtTime(0.0001, stopTime); // Exponential to near-zero
+
+            // Stop at next zero crossing after fade out
+            const frequency = osc.oscillator.frequency.value;
+            const periodTime = 1 / frequency;
+            const phaseDuration = ((stopTime + periodTime) % periodTime) / periodTime;
+            const timeToNextZeroCrossing = (1 - phaseDuration) * periodTime;
+            osc.oscillator.stop(stopTime + timeToNextZeroCrossing);
+
+            // Schedule disconnection
+            setTimeout(() => {
+                osc.oscillator.disconnect();
+                osc.gain.disconnect();
+                filter.disconnect();
+            }, (fadeOutTime + stopDelay + timeToNextZeroCrossing) * 1000 + 10);
+        });
+        this.oscillators = [];
+    }
+
+    update(controlParams, harmonicSeries) {
+        if (!this.isPlaying) return;
+        this.clearOscillators();
+        const fadeInTime = Math.max(addSynthFadeInTime, controlParams.attack);
+        let totalAmplitude = 0;
+        // Create an array to hold calculated frequencies
+        const frequencies = harmonicSeries.map(harmonic => 
+            controlParams.fundamentalFrequency * harmonic
+        ).filter(frequency => frequency >= 20 && frequency <= 22000); // Filter out invalid frequencies
+        frequencies.forEach((frequency, index) => { // Calculate total amplitude based on harmonic series values
+            const amplitude = 1 / harmonicSeries[index] * (1 - controlParams.decay);
+            totalAmplitude += amplitude;
+        });
+        frequencies.forEach((frequency, index) => { // Create oscillators based on filtered frequencies
+            const oscillator = this.audioContext.createOscillator();
+            oscillator.type = controlParams.oscType;
+            oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+            const oscGain = this.audioContext.createGain();
+            let initialGain;
+            if (harmonicSeries.length === 1) { 
+                initialGain = controlParams.volume * (1 - controlParams.decay); // Set gain based on the single harmonic value
+            } else { 
+                initialGain = ((1 / harmonicSeries[index] * (1 - controlParams.decay)) / totalAmplitude) * controlParams.volume; 
+            }
+            oscGain.gain.setValueAtTime(0, this.audioContext.currentTime);
+            oscGain.gain.linearRampToValueAtTime(initialGain, this.audioContext.currentTime + fadeInTime);
+            oscillator.connect(oscGain);
+            oscGain.connect(this.gainNode);
+            oscillator.start();
+            this.oscillators.push({ oscillator, gain: oscGain });
+        });
+    }
+
+    getIsPlaying() {
+        return this.isPlaying;
+    }
+}
+
+async function clearAdditiveSynthesis() {
+    // Clears all Synths and audioContext
+    const stopPromises = AddSynths.map(synth => {
+        if (synth) {
+            return synth.stop();
+        }
+        return Promise.resolve();
+    });
+    await Promise.all(stopPromises); // Wait for all synths to stop
+    AddSynths = []; // Once all are stopped, clear the array and close audio context
+    if (addSynthGainNode) {
+        addSynthGainNode.disconnect();
+        addSynthGainNode = null;
+    }
+    if (audioContext) {
+        await audioContext.close();
+        audioContext = null;
+    }
+}
+
+function initAudio() {
+    // Inits audioContext if needed
+    if (!audioContext) {
+        const audioContextOptions = {
+            latencyHint: 'interactive', // or 'playback', 'balanced'
+            sampleRate: 44100, // Set your desired sample rate
+        };
+        audioContext = new (window.AudioContext || window.webkitAudioContext)(audioContextOptions);
+        addSynthGainNode = audioContext.createGain();
+        addSynthGainNode.connect(audioContext.destination);
+    }
+}
+
+function addSynthAdjustMasterGain() {
+    const activeCount = AddSynths.filter(synth => synth.getIsPlaying()).length;
+    if (activeCount > 0) {
+        addSynthGainNode.gain.setTargetAtTime(1 / Math.sqrt(activeCount), audioContext.currentTime, 0.1);
+    }
+}
+
+async function startAdditiveSynthesis() {
+    // Start additive Synth mode
+    initAudio();
+    if (isAddSynthPlaying) { // If synthesis is currently playing, stop it first
+        await stopAdditiveSynthesis();
+    }
+    isAddSynthPlaying = true;
+    updateAdditiveSynthesis();
+    elements.playAddSynth.checked = true;
+}
+
+async function stopAdditiveSynthesis() {
+    // Stops additive Synth mode
+    await clearAdditiveSynthesis();
+    isAddSynthPlaying = false;
+    elements.playAddSynth.checked = false;
+}
+
+function toggleAdditiveSynthesis() {
+    // Toggle in between additive Synth on/off
+    if (isAddSynthPlaying) {
+        stopAdditiveSynthesis();
+    } else {
+        startAdditiveSynthesis();
+    }
+}
+
+function createAddSynthControlParams() {
+    // Create Control Params needed for additive Synth
+    return {
+        fundamentalFrequency: params.calcFrequency,
+        oscType: params.addSynthOscType,
+        volume: params.addSynthVolume,
+        attack: params.addSynthAttack,
+        decay: params.addSynthDecay
+    };
+}
+
+function updateAdditiveSynthesis() {
+    // Creates New Synth on parameter change and stops current one 
+    if (!isAddSynthPlaying) return;
+    if (!audioContext) initAudio();
+    const controlParams = createAddSynthControlParams();
+    let synthIndex = (AddSynths.length === 0) ? 0 : (addSynthLastUsed + 1) % addSynthMaxSynthCount;
+    if (AddSynths.length > 0) { // Stop last synth in case
+        AddSynths[addSynthLastUsed].stop();
+    }
+    const newSynth = new AdditiveSynthesizer(audioContext);
+    newSynth.start(controlParams, cachedHarmonicSeries, addSynthGainNode);
+    AddSynths[synthIndex] = newSynth;
+    addSynthLastUsed = synthIndex;
+    addSynthAdjustMasterGain();
+}
+
+// Block: Export, Save and Load Settings from File or URL parameter
+function exportCanvas(format) {
+    // Exports the canvas to file in selected format
+    const mimeType = `image/${format}`;
+    const fileName = `canvas-export.${format}`;
+    const originalCanvas = document.getElementById("canvas");
+    const scaleFactor = 2; // Adjust as needed
+    const width = originalCanvas.width * scaleFactor;
+    const height = originalCanvas.height * scaleFactor;
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = width;
+    exportCanvas.height = height;
+    const ctx = exportCanvas.getContext('2d');
+    ctx.drawImage(originalCanvas, 0, 0, width, height);
+    exportCanvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        link.click();
+        URL.revokeObjectURL(url);
+    }, mimeType);
+}
+
+async function saveSettings() {
+    // save all ui parameters and settings to file or download
+    const settings = getAppSettings(); 
+    const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+    if ('showSaveFilePicker' in window) {
+        try {
+            const handle = await window.showSaveFilePicker({
+                suggestedName: 'HLC-Settings.bsv',
+                types: [{
+                    description: 'HLC Bubble Visualizer Settings (.bsv)',
+                    accept: { 'application/json': ['.bsv'] },
+                }],
+                id: 'HLC-settings-picker' // Same ID for synchronization
+            });
+            const writable = await handle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+        } catch (err) {
+            console.error('Failed to save file:', err);
+        }
+    } else {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'HLC-Settings.bsv';
+        link.click();
+        URL.revokeObjectURL(link.href);
+    }
+}
+
+function getAppSettings() {
+    // Gets all settings and formats them for storage
+    return {
+        zoomManual: parseFloat(elements.zoomManual.value),
+        wavelength: parseFloat(elements.wavelength.value),
+        calcFrequency: parseFloat(elements.calcFrequency.value),
+        calcKeyStepSelection: elements.calcKeyStepSelection.value,
+        calcKeyStepFactor: parseFloat(elements.calcKeyStepFactor.value),
+        axis: parseInt(elements.axis.value),
+        coordinateSystem: elements.coordinateSystem.value,
+        harmonics: parseInt(elements.harmonics.value),
+        harmonicsType: elements.harmonicsType.value,
+        harmonicsPhase: elements.harmonicsPhase.value,
+        rotationAngle: parseFloat(elements.rotationAngleInput.value),
+        rotationSpeed: parseFloat(elements.rotationSpeedInput.value),
+        showAxis: elements.showAxis.checked,
+        AxisColor: elements.AxisColor.value,
+        showCircle: elements.showCircle.checked,
+        circleColor: elements.circleColor.value,
+        showHex: elements.showHex.checked,
+        hexColor: elements.hexColor.value,
+        showHexIn: elements.showHexIn.checked,
+        hexInColor: elements.hexInColor.value,
+        showSquare: elements.showSquare.checked,
+        squareColor: elements.squareColor.value,
+        showSquareIn: elements.showSquareIn.checked,
+        squareInColor: elements.squareInColor.value,
+        showWave: elements.showWave.checked,
+        waveColor: elements.waveColor.value,
+        showTriangle: elements.showTriangle.checked,
+        triangleColor: elements.triangleColor.value,
+        canvasBackgroundColor: elements.canvasBackgroundColor.value,
+        addSynthVolume: parseFloat(elements.addSynthVolume.value),
+        addSynthAttack: parseFloat(elements.addSynthAttack.value),
+        addSynthDecay: parseFloat(elements.addSynthDecay.value),
+        addSynthOscType: elements.addSynthOscType.value
+    };
+}
+
+function getFileParameter() {
+    // Get the file parameter from the URL
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.has('file') ? urlParams.get('file') : '';
+}
+
+async function loadSettingsFromFile(filePath) {
+    // Loads all settings from file in specified filePath (both URL or local)
+    let fileContent;
+    try {
+        if (filePath instanceof File) {
+            // If filePath is a File object
+            const reader = new FileReader();
+            return new Promise((resolve, reject) => {
+                reader.onload = (event) => resolve(event.target.result);
+                reader.onerror = (err) => reject(err);
+                reader.readAsText(filePath); // Read the file as text
+            });
+        } else {
+            // If filePath is a URL string
+            const response = await fetch(filePath);
+            if (!response.ok) throw new Error('Network response was not ok');
+            fileContent = await response.text();
+        }
+    } catch (err) {
+        console.error('Failed to load settings from file:', err);
+        alert('Error loading settings from specified file.');
+        return null; // Return null on error
+    }
+    return fileContent; // Return the content of the file
+}
+
+async function loadSettingsFilePick() {
+    // Opens File picker and loads settings from file
+    let fileContent;
+    if ('showOpenFilePicker' in window) { // Use File System Access API if available
+        try {
+            const [handle] = await window.showOpenFilePicker({
+                types: [{
+                    description: 'HLC Bubble Visualizer Settings (.bsv)',
+                    accept: { 'application/json': ['.json', '.bsv'] },
+                }],
+                id: 'HLC-settings-picker' // Same ID for synchronization
+            });
+            const file = await handle.getFile();
+            fileContent = await loadSettingsFromFile(file); // Pass the File object directly
+        } catch (err) {
+            console.error('Failed to open file picker:', err);
+            return; // Handle error silently
+        }
+    } else { // Fallback for browsers that do not support File System Access API
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json,.bsv';
+        const promise = new Promise((resolve) => {
+            input.onchange = (event) => resolve(event.target.files[0]);
+        });
+        input.click();
+        const file = await promise;
+
+        if (file) {
+            fileContent = await loadSettingsFromFile(file); // Pass the File object directly
+        }
+    }
+    if (fileContent) {
+        applyAppSettings(JSON.parse(fileContent)); // Parse JSON before applying settings
+    }
+}
+
+async function loadSettingsInitFromFileParam() {
+    // Load Settings from Url file parameter
+    const urlParameterFilePath = getFileParameter();
+    if (urlParameterFilePath) {
+        const fileContent = await loadSettingsFromFile(urlParameterFilePath);
+        if (fileContent) {
+            applyAppSettings(JSON.parse(fileContent));
+            return true;
+        }
+    }
+    return false; 
+}
+
+function applyAppSettings(settings) {
+    // Apply loaded settings to app user interface
+    // Handle integer inputs
+    const integerInputIds = ['axis', 'harmonics'];
+    integerInputIds.forEach(id => {
+        if (settings[id] !== undefined) {
+            const input = document.getElementById(id);
+            if (input) {
+                input.value = settings[id];
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }
+    });
+
+    // Handle dropdown selection inputs
+    const dropdownInputIds = ['coordinateSystem', 'harmonicsType', 'harmonicsPhase', 'addSynthOscType', 'calcKeyStepSelection'];
+    dropdownInputIds.forEach(id => {
+        if (settings[id] !== undefined) {
+            const input = document.getElementById(id);
+            if (input) {
+                input.value = settings[id];
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+    });    
+    // Handle Numerical Inputs with float
+    const inputIdsFloat = ['calcFrequency', 'calcKeyStepFactor'];
+    inputIdsThreeFixes.forEach(id => {
+        if (settings[id] !== undefined) {
+            const input = document.getElementById(id);
+            if (input) {
+                input.value = parseFloat(settings[id]);
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }
+    });
+    // Handle Wavelength
+    if (settings['wavelength'] !== undefined) {
+        const input = document.getElementById('wavelength');
+        if (input) {
+            input.value = settings['wavelength'].toFixed(DECIMALS_WAVELENGTH);
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    }
+    // Handle Numerical Inputs with 3 fixed decimals
+    const inputIdsThreeFixes = ['rotationAngle', 'addSynthVolume', 'addSynthAttack', 'addSynthDecay'];
+    inputIdsThreeFixes.forEach(id => {
+        if (settings[id] !== undefined) {
+            const input = document.getElementById(id);
+            if (input) {
+                input.value = settings[id].toFixed(3);
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }
+    });
+    // Handle Numerical Inputs with 2 fixed decimals
+    const inputIdsTwoFixed = ['zoomManual', 'rotationSpeed'];
+    inputIdsTwoFixed.forEach(id => {
+        if (settings[id] !== undefined) {
+            const input = document.getElementById(id);
+            if (input) {
+                input.value = settings[id].toFixed(2);
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }
+    });
+    // Handle checkbox inputs
+    const checkboxInputs = ['showAxis', 'showCircle', 'showHex', 'showHexIn', 'showSquare', 'showSquareIn', 'showWave', 'showTriangle'];
+    checkboxInputs.forEach(id => {
+        if (settings[id] !== undefined) {
+            const checkbox = document.getElementById(id);
+            if (checkbox) {
+                checkbox.checked = settings[id];
+                checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+    });
+    // Handle color inputs
+    const colorInputs = ['AxisColor', 'circleColor', 'hexColor', 'hexInColor', 'squareColor', 'squareInColor', 'waveColor', 'triangleColor', 'canvasBackgroundColor'];
+    colorInputs.forEach(id => {
+       if (settings[id] !== undefined) {
+           const colorInput = document.getElementById(id);
+           if (colorInput) {
+               colorInput.value = settings[id];
+               colorInput.dispatchEvent(new Event('input', { bubbles: true }));
+           }
+       }
+   });
+}
+// Block: Modals Open and Close
+function toggleModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        if (modal.style.display === 'none') {
+            closeAllModals();
+            modal.style.display = 'block';
+        } else {
+            modal.style.display = 'none';
+        }
+    }
+}
+function handleModalClick(event) {
+    if (event.target === this) {
+        toggleModal(this.id); // Close the modal if clicked outside content
+    }
+}
+function closeAllModals() {
+    const openModals = ['licenseModal', 'calculatorModal', 'addSynthModal', 'geometryModal'];
+    openModals.forEach(modalId => {
+        const modal = document.getElementById(modalId);
+        if (modal && modal.style.display === 'block') {
+            toggleModal(modalId);
+        }
+    });
+}
+function positionModal(modalId, topDistance) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        // Set the top position based on the provided topDistance
+        modal.style.top = `${topDistance}px`;
+        modal.style.left = '0'; // Align to left
+    }
+}
+
+// Block: Event listeners and special functions
+elements.toggleButton.addEventListener('click', toggleVisualization);
+elements.addSynthPlayButton.addEventListener("click", toggleAdditiveSynthesis);
+elements.playAddSynth.addEventListener("change", toggleAdditiveSynthesis);
+const inputElements = [elements.zoomManual, elements.axis, elements.coordinateSystem, elements.harmonics, elements.harmonicsType, elements.harmonicsPhase, elements.rotationAngleInput, elements.rotationSpeedInput, elements.addSynthVolume, elements.addSynthAttack, elements.addSynthDecay, elements.addSynthOscType];
+inputElements.forEach(element => {
+    element.addEventListener('change', debouncedUpdateParams);
+});
+
+elements.calcKeyStepSelection.addEventListener('change', function() {
+    updateManualKeyStepFactor();
+    updateParams();
+});
+
+elements.calcKeyStepFactor.addEventListener('input', function() {
+    const customValue = parseFloat(this.value);
+    if (!isNaN(customValue)) {
+        params.calcKeyStepFactor = customValue;
+        elements.calcKeyStepSelection.value = 'custom';
+        updateParams();
+    }
+});
+
+const checkboxElements = [elements.showAxis, elements.showCircle, elements.showHex, elements.showHexIn,
+ 	elements.showSquare, elements.showSquareIn,elements.showWave, elements.showTriangle];
+checkboxElements.forEach(checkbox => {
+    checkbox.addEventListener('change', debouncedUpdateParams);
+});
+
+const colorElements = [elements.AxisColor, elements.circleColor, elements.hexColor, elements.hexInColor, 
+	elements.squareColor, elements.squareInColor, elements.triangleColor, elements.waveColor, elements.canvasBackgroundColor];
+colorElements.forEach(colorInput => {
+    colorInput.addEventListener('input', debouncedUpdateParams);
+});
+
+// Calculation of frequency / wavelength linked
+elements.wavelength.addEventListener('change', function () {
+    updateWavelengthOrFrequency ('calcFrequency');
+    debouncedUpdateParams();
+});
+
+elements.calcFrequency.addEventListener('change', function () {
+    updateWavelengthOrFrequency ('wavelength');
+    debouncedUpdateParams();
+});
+
+elements.resetAngleButton.addEventListener('click', () => { // Reset rotation angle to 0
+    elements.rotationAngleInput.value = 0;
+    debouncedUpdateParams();	
+});
+
+// Link slider to speed input and update visualization
+elements.rotationSpeedSlider.addEventListener('input', function() {
+    elements.rotationSpeedInput.value = this.value;
+    debouncedUpdateParams();
+});
+
+elements.rotationSpeedInput.addEventListener('input', function() {
+    elements.rotationSpeedSlider.value = this.value;
+});
+
+// Window resize event listener
+window.addEventListener('resize', resizeCanvas);
+
+// Fullscreen functionality integration
+elements.fullscreenButton.addEventListener('click', () => { // Toggle fullscreen mode on button click
+    toggleFullscreen();
+});
+
+// Exit fullscreen on double-click
+elements.canvas.addEventListener('dblclick', () => {
+    toggleFullscreen();
+});
+
+document.addEventListener('keydown', (event) => {
+    const manualZoomStep = 2;
+    const manualRotationOrSpeedStep = 10;
+    if (document.activeElement.tagName === 'INPUT' && document.activeElement.type === 'number') {
+        // If focused on number input, do not execute key listener logic
+        return; // Exit the function early
+    }
+    switch (event.key) {
+    	case 'Backspace':
+            event.preventDefault();
+            elements.rotationAngleInput.value = 0;
+            updateParams();    	
+            break;
+    	case 'Enter':
+            event.preventDefault();
+            toggleFullscreen();            
+            break;
+	case 'Escape':
+            if (document.fullscreenElement){
+                forceShowUIwithCursor();
+            } else {
+            	closeAllModals();
+            }
+            break;
+        case ' ':
+        case 'Spacebar':
+            event.preventDefault();
+            toggleVisualization();
+            break;
+        case '0':
+            event.preventDefault();
+            elements.coordinateSystem.value = elements.coordinateSystem.value === 'radial' ? 'orthogonal' : 'radial';
+            updateParams();
+            break;
+        case '1':
+            event.preventDefault();
+            elements.showAxis.checked = !elements.showAxis.checked;
+            updateParams();
+            break;
+        case '2':
+            event.preventDefault();
+            elements.showCircle.checked = !elements.showCircle.checked;
+            updateParams();
+            break;
+        case '3':
+            event.preventDefault();
+            elements.showHex.checked = !elements.showHex.checked;
+            updateParams();
+            break;
+        case '4':
+            event.preventDefault();
+            elements.showHexIn.checked = !elements.showHexIn.checked;
+            updateParams();
+            break;
+        case '5':
+            event.preventDefault();
+            elements.showSquare.checked = !elements.showSquare.checked;
+            updateParams();
+            break;
+        case '6':
+            event.preventDefault();
+            elements.showSquareIn.checked = !elements.showSquareIn.checked;
+            updateParams();
+            break;
+        case '7':
+            event.preventDefault();
+            elements.showWave.checked = !elements.showWave.checked;
+            updateParams();
+            break;
+        case '8':
+            event.preventDefault();
+            elements.showTriangle.checked = !elements.showTriangle.checked;
+            updateParams();
+            break;
+        case '9':
+        case '#':
+            event.preventDefault();
+            toggleAdditiveSynthesis();
+            break;
+        case 'q': 
+            event.preventDefault();
+            cycleColor(elements.AxisColor);
+            break;
+        case 'w': 
+            event.preventDefault(); 
+            cycleColor(elements.circleColor);
+            break;
+        case 'e': 
+            event.preventDefault(); 
+            cycleColor(elements.hexColor);
+            break;
+        case 'r': 
+            event.preventDefault(); 
+            cycleColor(elements.hexInColor);
+            break;
+        case 't': 
+            event.preventDefault(); 
+            cycleColor(elements.squareColor);
+            break;
+        case 't': 
+            event.preventDefault(); 
+            cycleColor(elements.squareInColor);
+            break;
+	case 'z':
+	case 'y':
+	    if ((GermanKeyboardLayout && event.key === "z") || (!GermanKeyboardLayout && event.key === "y")) {
+                event.preventDefault(); 
+                cycleColor(elements.squareInColor);
+	    } else {
+		event.preventDefault(); 
+		elements.axis.value = Math.max(parseInt(elements.axis.value) - 1, 1);
+		updateParams();
+	    }
+	    break;
+        case 'u': 
+	    event.preventDefault();
+	    cycleColor(elements.waveColor);
+            break;
+        case 'i':
+            event.preventDefault(); 
+            cycleColor(elements.triangleColor);
+            break;
+        case 'o':
+            event.preventDefault(); 
+            cycleColor(elements.canvasBackgroundColor);
+            break;
+        case '+':
+            event.preventDefault();
+            elements.addSynthVolume.value = Math.max(Math.min((parseFloat(elements.addSynthVolume.value) + 0.1), 1),0).toFixed(3);
+            updateParams();
+            break;
+        case '-':
+            event.preventDefault();
+            elements.addSynthVolume.value = Math.max(Math.min((parseFloat(elements.addSynthVolume.value) - 0.1), 1),0).toFixed(3);
+            updateParams();
+            break;            
+        case 'a':
+            event.preventDefault();
+            elements.axis.value = Math.min(parseInt(elements.axis.value) + 1, 1024);
+            updateParams();
+            break;
+        case 's':
+            event.preventDefault();
+            elements.harmonics.value = Math.min(parseInt(elements.harmonics.value) + 1, 64);
+            updateParams();
+            break;
+        case 'x':
+            event.preventDefault();
+            elements.harmonics.value = Math.max(parseInt(elements.harmonics.value) - 1, 1);
+            updateParams();
+            break;
+        case 'd':
+            event.preventDefault();
+            let prevIndex = harmonicTypes.indexOf(elements.harmonicsType.value) - 1;
+            if (prevIndex < 0) prevIndex = harmonicTypes.length - 1;
+            elements.harmonicsType.value = harmonicTypes[prevIndex];
+            updateParams();
+            break;            
+        case 'c':
+            event.preventDefault();
+            let nextIndex = harmonicTypes.indexOf(elements.harmonicsType.value) + 1;
+            if (nextIndex >= harmonicTypes.length) nextIndex = 0;
+            elements.harmonicsType.value = harmonicTypes[nextIndex];
+            updateParams();
+            break;
+        case 'f':
+            event.preventDefault();
+            let prevPhaseIndex = harmonicPhases.indexOf(elements.harmonicsPhase.value) - 1;
+            if (prevPhaseIndex < 0) prevPhaseIndex = harmonicPhases.length - 1;
+            elements.harmonicsPhase.value = harmonicPhases[prevPhaseIndex];
+            updateParams();
+            break;
+        case 'v':
+            event.preventDefault();
+            let nextPhaseIndex = harmonicPhases.indexOf(elements.harmonicsPhase.value) + 1;
+            if (nextPhaseIndex >= harmonicPhases.length) nextPhaseIndex = 0;
+            elements.harmonicsPhase.value = harmonicPhases[nextPhaseIndex];
+            updateParams();
+            break;
+	case 'g':
+	case 'Home':
+	    event.preventDefault();
+	    if (elements.calcKeyStepSelection.value !== 'custom') {
+		let prevKeyStepIndex = manualKeyStepSelections.indexOf(elements.calcKeyStepSelection.value) - 1;
+		if (prevKeyStepIndex < 1) prevKeyStepIndex = manualKeyStepSelections.length - 1;
+		elements.calcKeyStepSelection.value = manualKeyStepSelections[prevKeyStepIndex];
+		updateManualKeyStepFactor();
+		updateParams();
+	    }
+	    break;
+	case 'b':
+	case 'End':
+	    event.preventDefault();
+	    if (elements.calcKeyStepSelection.value !== 'custom') {
+		let nextKeyStepIndex = manualKeyStepSelections.indexOf(elements.calcKeyStepSelection.value) + 1;
+		if (nextKeyStepIndex >= manualKeyStepSelections.length) nextKeyStepIndex = 1;
+		elements.calcKeyStepSelection.value = manualKeyStepSelections[nextKeyStepIndex];
+		updateManualKeyStepFactor();
+		updateParams();
+	    }
+	    break;
+	case 'h':
+	case 'PageUp':
+	    event.preventDefault();
+	    calculateKeyStepFactorApply (true);
+	    break;
+	case 'n':
+	case 'PageDown':
+	    event.preventDefault();
+	    calculateKeyStepFactorApply (false);
+	    break;
+	case 'j':
+	    event.preventDefault();
+	    calculateKeyStepFactorApply (true, 2);
+	    break;
+	case 'm':
+	    event.preventDefault();
+	    calculateKeyStepFactorApply (false, 2);
+	    break;	    
+	case 'k':
+	    event.preventDefault();
+	    calculateKeyStepFactorApply (true, 3);
+	    break;
+	case ',':
+	    event.preventDefault();
+	    calculateKeyStepFactorApply (false, 3);
+	    break;	    
+	case 'Pause':
+	case '.':
+	    event.preventDefault();
+    	    updateAdditiveSynthesis();
+	    break;	
+        case 'ArrowUp':
+            event.preventDefault();
+            handleZoom(-manualZoomStep);
+            break;
+        case 'ArrowDown':
+            event.preventDefault();
+            handleZoom(manualZoomStep);
+            break;
+        case 'ArrowLeft':
+            event.preventDefault();
+            handleDrag(-manualRotationOrSpeedStep);		
+            break;
+        case 'ArrowRight':
+            event.preventDefault();
+            handleDrag(manualRotationOrSpeedStep);
+            break;
+    }
+});
+
+document.addEventListener('mousemove', resetMouseTimer);
+
+// Fullscreen change listener
+document.addEventListener('visibilitychange', showUIwithCursor);
+window.addEventListener('focus', showUIwithCursor);
+
+document.addEventListener("fullscreenchange", () => {
+    if (document.fullscreenElement) {
+        resetMouseTimer();
+    } else {
+        forceShowUIwithCursor();
+    }
+});
+
+let lastTouchDistance = 0;
+let isDragging = false;
+let lastX, lastY;
+
+// Add touch event listeners
+canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+canvas.addEventListener('touchend', handleTouchEnd);
+
+// Add pointer event listeners
+canvas.addEventListener('pointerdown', handlePointerDown);
+canvas.addEventListener('pointermove', handlePointerMove);
+canvas.addEventListener('pointerup', handlePointerUp);
+canvas.addEventListener('pointerleave', handlePointerUp);
+
+function handleTouchStart(e) {
+  e.preventDefault();
+  if (e.touches.length === 2) {
+    lastTouchDistance = getTouchDistance(e.touches);
+  }
+}
+
+function handleTouchMove(e) {
+  e.preventDefault();
+  if (e.touches.length === 2) {
+    const currentDistance = getTouchDistance(e.touches);
+    const delta = currentDistance - lastTouchDistance;
+    handleZoom(delta * 0.1);
+    lastTouchDistance = currentDistance;
+  }
+}
+
+function handleTouchEnd(e) {
+  lastTouchDistance = 0;
+}
+
+function handlePointerDown(e) {
+  isDragging = true;
+  lastX = e.clientX;
+  lastY = e.clientY;
+}
+
+function handlePointerMove(e) {
+  if (isDragging) {
+    const deltaX = e.clientX - lastX;
+    handleDrag(deltaX);
+    lastX = e.clientX;
+    lastY = e.clientY;
+  }
+}
+
+function handlePointerUp() {
+  isDragging = false;
+}
+
+function getTouchDistance(touches) {
+  return Math.hypot(
+    touches[0].clientX - touches[1].clientX,
+    touches[0].clientY - touches[1].clientY
+  );
+}
+
+function handleZoom(delta) {
+    zoomCurrentLevel -= delta * Math.max(0.05, (zoomAcceleration * zoomCurrentLevel)); // delta adjusted by acceleration factor based on zoomAcceleration and Zoom
+    zoomCurrentLevel = Math.max(zoomMinValue, Math.min(zoomMaxValue, zoomCurrentLevel));
+    elements.zoomManual.value = zoomCurrentLevel;
+    zoomSumDelta = 0;
+    updateParams();
+}
+
+function handleDrag(deltaX) {
+  //If animated mode is activated then change rotation speed, else rotate angle directly
+    if (isAnimating) {
+        params.rotationSpeed += (deltaX * 0.001) * 10;
+        params.rotationSpeed = Math.max(-128, Math.min(128, params.rotationSpeed));
+        elements.rotationSpeedInput.value = params.rotationSpeed.toFixed(2);
+        elements.rotationSpeedSlider.value = params.rotationSpeed.toFixed(2);
+    } else {
+        params.rotationAngle += deltaX / 250;
+        if (params.rotationAngle > Math.PI * 2) {
+            params.rotationAngle -= Math.PI * 2;
+        } else if (params.rotationAngle < -Math.PI * 2) {
+            params.rotationAngle += Math.PI * 2;
+        }
+        elements.rotationAngleInput.value = params.rotationAngle.toFixed(3);
+    }
+    updateParams();
+}
+
+// Modify the existing wheel event listener
+canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    handleZoom(e.deltaY * 0.01);
+});
+
+// Picture Export functionality
+elements.exportButton.addEventListener('click', () => {
+    const format = elements.exportFormat.value;
+    exportCanvas(format);
+});
+
+// Save and Load Settings
+elements.saveButton.addEventListener('click', saveSettings);
+elements.loadButton.addEventListener('click', loadSettingsFilePick);
+
+// Modals
+elements.wavelengthButton.addEventListener('click', () => toggleModal('calculatorModal'));
+elements.harmonicButton.addEventListener('click', () => toggleModal('addSynthModal'));
+elements.geometryButton.addEventListener('click', () => toggleModal('geometryModal'));
+elements.licenseButton.addEventListener('click', () => toggleModal('licenseModal'));
+document.getElementById('licenseModal').addEventListener('click', handleModalClick);
+
+// Program init on startup
+document.addEventListener('DOMContentLoaded', programInitialization);
+</script>
+
+</body>
+</html>
+

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hit Lukas - Click Rate</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      background-color: #f0f0f0;
+    }
+    .menu {
+      padding: 10px;
+      background-color: #333;
+      color: white;
+    }
+    #gameCanvas {
+      flex-grow: 1;
+      width: 100%;
+    }
+    #puzzleGame {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(255, 255, 255, 0.9);
+      padding: 20px;
+      border-radius: 10px;
+      display: none;
+    }
+    #puzzlePieces {
+      display: flex;
+      justify-content: center;
+      margin: 20px 0;
+    }
+    #puzzlePieces div {
+      font-size: 24px;
+      font-weight: bold;
+      border: 1px solid #999;
+      padding: 10px;
+      margin: 5px;
+      background-color: #ddd;
+      cursor: pointer;
+    }
+    .mode-select {
+      position: relative;
+    }
+    .mode-select .tooltip {
+      visibility: hidden;
+      width: 120px;
+      background-color: black;
+      color: #fff;
+      text-align: center;
+      padding: 5px 0;
+      border-radius: 6px;
+      position: absolute;
+      z-index: 1;
+      bottom: 125%;
+      left: 50%;
+      margin-left: -60px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .mode-select .tooltip::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: black transparent transparent transparent;
+    }
+    .mode-select:hover .tooltip {
+      visibility: visible;
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="menu">
+    <select id="timeframe">
+      <option value="5" selected>5 Seconds</option>
+      <option value="10">10 Seconds</option>
+      <option value="30">30 Seconds</option>
+      <option value="60">60 Seconds</option>
+      <option value="300">5 Minutes</option>
+    </select>
+    <select id="modeCpsMax" class="mode-select">
+	  <option value="3.5" title="Granny - Easy mode, suitable for regular clicking">Granny</option>
+	  <option value="5.5" title="Mommy - Medium mode, suitable for beginner jitter clicking">Mommy</option>
+	  <option value="6.5" title="Kiddy - Medium-Hard mode, suitable for intermediate jitter clicking">Kiddy</option>
+	  <option value="7.5" title="Easy - Simple challenge, suitable for beginner butterfly clicking">Easy</option>
+	  <option value="8.5" selected title="Medium - Balanced challenge, suitable for intermediate butterfly clicking">Medium</option>
+	  <option value="9.5" title="Hard - Tough challenge, suitable for advanced butterfly clicking or beginner drag clicking">Hard</option>
+	  <option value="10.5" title="Expert - High difficulty, suitable for advanced butterfly clicking or intermediate drag clicking">Expert</option>
+	  <option value="12.5" title="Pro - Very high difficulty, suitable for advanced drag clicking">Pro</option>
+	  <option value="16.5" title="God - Extremely high difficulty, suitable for expert-level drag clicking">God</option>
+          <option value="999" title="Hacker - Ultimate challenge, not achievable by humans, requires automated tools">Hacker</option>
+    </select>
+    <button id="hackButton">Hack Event Registration</button>
+    <input id="hackInput" type="number" min="0" max="100000" value="1" title="Enter number of events (0 - 100000)">
+  </div>
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="puzzleGame">
+    <h2>Fix the Thermometer!</h2>
+    <div id="puzzlePieces"></div>
+    <button id="checkPuzzle">Check</button>
+  </div>
+  <script type="module" src="cpsGame.js"></script>
+</body>
+</html>
+

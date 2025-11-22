@@ -1,0 +1,228 @@
+
+
+
+
+
+
+Was noch fehlt ist die Event-Logic zum Frequenz zählen und die Schnittstelle...
+
+Das ist quasi EventGear Modul... Da können 60000 events / Sekunde durchlaufen, sollte Stream mit Metadata managen
+
+
+
+
+ist halt die frage ob man da über eventgear nen websocket stream aufmacht. An die Schnittstelle können events mit metadata (Objekte, Messergebnisse) gesendet und dann verarbeitet werden.
+
+
+
+
+Für mich ist die Frage wie ich am besten Data Stream in die App reinbekomme. In das EventGear hab ich ne Websocket Bridge. Aber die müsste mal getestet werden. Prinzipiell müsste man da EEG anbinden können. Einfach Event + Metadata
+
+
+
+Es hat ja schon Interface dafür: // * WebSocket Bridge Usage Example for EventGear.js 
+// Set up WebSocket connection URLs for incoming and outgoing data.
+eventGear.websocketSetIncomingUrl('ws://localhost:8080/events');
+eventGear.websocketSetOutgoingUrl('ws://localhost:8080/publish');
+
+// Set incoming and outgoing channels for WebSocket communication.
+eventGear.websocketSetIncomingChannel('incomingWebSocketChannel');
+eventGear.websocketSetOutgoingChannel('outgoingWebSocketChannel');
+
+// Enable auto-receiving of WebSocket messages.
+eventGear.websocketSetAutoReceive(true);
+
+// Enable auto-sending of WebSocket messages.
+eventGear.websocketSetAutoSend(true);
+
+// Send an initial message through WebSocket manually.
+eventGear.websocketSendEvent({ user: 'Charlie', action: 'connect' });
+
+// Reset all configurations related to WebSocket channels.
+eventGear.websocketReset(); // Resets all internal states and callbacks without affecting active state
+*/
+Felix
+ich kann da also empfangen und events + meta verarbeiten. Ist halt nur die Sache dahin zu senden.
+Felix
+das geht dann ins Frequenz und Event-Management und wird automatisch verarbeitet. Du kannst dann an den Callback hängen was du willst...
+Felix
+Für gepulste Events wird automatisch Frequenz gemessen...
+Felix
+Was halt noch nicht ganz fertig ist jetzt sind die frei-programmierbaren Callbacks... Da soll ein internes Assert-System dann mit dynamischen Werten laufen... Jetzt sind das noch 10 statische methoden...
+Felix
+Felix Mönnich
+Wenn ich events per websocket da rein bekomme, kann ich dranhängen was ich will...
+Felix
+Felix Mönnich
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+die dinger taugen als nodes für ein neuronales netzwerk mit 30 Zeilen code...
+Felix
+Felix Mönnich
+
+
+. Creating a Configuration Class
+
+javascript
+class ModelConfig {
+    constructor() {
+        this.configurations = {};
+    }
+
+    loadModel(name, config) {
+        this.configurations[name] = config;
+    }
+
+    getModel(name) {
+        return this.configurations[name];
+    }
+}
+
+2. Initializing EventGear Instances
+
+javascript
+const processors = [];
+const numberOfNeurons = 5;
+
+for (let i = 0; i < numberOfNeurons; i++) {
+    processors[i] = new EventGear(1000); // Initialize each neuron
+}
+
+3. Loading Model Configurations
+
+javascript
+const modelConfig = new ModelConfig();
+modelConfig.loadModel('simpleNN', {
+    weights: [0.5, 0.3, 0.2],
+    bias: 0.1,
+});
+
+// Example configuration retrieval
+const config = modelConfig.getModel('simpleNN');
+
+4. Implementing Callbacks for Neuron Logic
+
+javascript
+processors.forEach((processor, index) => {
+    processor.setMetadataChangeCallback(() => {
+        const inputData = processor.getMetadata();
+        
+        // Simple weighted sum calculation (simulating a neuron)
+        const weightedSum = inputData.values.reduce((sum, value, i) => {
+            return sum + value * config.weights[i];
+        }, 0) + config.bias;
+
+        // Activation function (e.g., ReLU)
+        const outputValue = Math.max(0, weightedSum);
+
+        console.log(Neuron ${index} Output:, outputValue);
+
+        // Register output as metadata for the next neuron
+        if (index < processors.length - 1) {
+            processors[index + 1].registerEvent({ metadata: { values: [outputValue] } });
+        }
+    });
+});
+
+// Register initial input data in the first neuron
+processors[0].registerEvent({ metadata: { values: [1, 2] } });
+
+
+
+
+
+
+
+Felix
+da kannst du dann events mit metadata durchs array schieben und im neuronalen Netz verarbeiten...
+Felix
+Der ganze Custom code einer app landet alls callback-funktion in den events und verarbeitet metadata
+Felix
+EventGear ist echt verücktes Paradigma... musst das nur auf ne codebase anwenden. 
+Felix
+die EventGear.js ist recht gut kommentiert und dokumentiert in der codebase...
+Felix
+da kannst du einfach all arten von ui / events reinfahren und verarbeiten... Einfach objekt-instanz dranhängen...
+Felix
+Ein Kontroll objekt erledigt alles für das Event...
+Felix
+massive Eventstrukturen in Arrays..
+Felix
+das kann halt nicht nur Klicks zählen;)
+Felix
+Wenn man dann Sachen über Websocket dahin streamt kannst du hinter die Event-Objekte hängen was du brauchst...
+
+
+
+
+Felix
+integrier das EventGear mal in Codebase, und wenn auch nur interface. 
+Felix
+nodejs bridge ist auch drin, aber nicht getestet. Sollte jedoch auch da taugen...
+Felix
+dual in/out nodejs oder websocket bridges für jedes event-object...
+Felix
+oder einfach ans dom-element binden für UI...
+
+und den eigentlichen payload code dann in den callback vom event...
+
+
+
+
+
+
+
+Der Teilchen / Zeit / Welle unterschied ist da hinsichtlich von Event-Handling gelöst...
+
+
+
+Das EventGear brauchst du nur als Kontroll-Objekt... das managt es dann... bisher noch nicht im Waveform visualizer, weil modular... und ich wollte es anfügen. Ist aber die geplante Schnittstelle:)
+
+
+
+wie das so mit EDA umgeht... Eigentlich braucht es nichts anderes... Das ist Timer und Counter in einem...
+
+Mehrfaches Uhrengetriebe mit Gängen, interne Intervalle...
+
+das objekt hat eigene update intervalle und zähler die unabhängig laufen... ohne events. Events können es auch Triggern. Das lässt sich prinzipiell überall anwenden... Loops, Intervalle, Statuskontrolle, Variablen... brauchst du so nicht mehr... ist dann alles in der Metadata...
+
+
+
+
+was damit passiert kommt in den Callback-Functions... 
+
+
+auf jeden Fall mal darauf loslassen. einfach schnittstelle und instanzen nutzen. Das EventGear kann ja portiert werden.
+
+
+
+Auf jeden Fall nehme ich das als Treiber und Counter für den Visualizer, wenn es modular wird... kann EventGear dann einfach da reinladen und Frequenzen managen... Beats... Eingehende Signale. Klicks, Pakete... 
+
+
+
+
+das zu integrieren... oder portieren. Am besten einfach instanz vom objekt machen. Alles kann event mit kotrollobjekt sein. Alle Events werden gezählt und analysiert... es reagiert dann in callbacks als feedback loop anstatt in ner festen Schleife...
+
+
+ja ist schon schwierig manchmal, aber macht halt schon so sinn,  frequenz und dateneingang.... Die können dann alle als Events laufen. Auf jeden Fall wird es spannend... Auf jeden Fall modularisiert. Noch ist es halt ganz schön als single html. Aber man kann es besser runterbrechen in eigene module.
+
+
+
+Es ermöglicht viele Dinge vernetzt. Außerdem kann es auch für Notenevents, timer... alles mögliche an Event managing laufen.
+
+
+
+
+

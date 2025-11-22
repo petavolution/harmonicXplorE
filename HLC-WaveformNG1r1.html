@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en" translate="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google" content="notranslate">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <title>HLC Bubble Singularity Visualizer</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent body overflow */
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            font-family: Arial, sans-serif;
+            background-color: #000000;
+            color: #ffffff;
+        }
+        .controls-container {
+            width: 100%;
+            background-color: #333;
+            padding: 15px; /* Original padding */
+            box-sizing: border-box;
+            overflow-x: auto; /* Enable horizontal scrolling */
+            overflow-y: auto; /* Enable vertical scrolling */
+            max-height: 100px; /* Set a maximum height for vertical scrolling */
+        }
+        .controls-container::-webkit-scrollbar {
+            height: 10px; /* Height of horizontal scrollbar */
+        }
+        .controls-container::-webkit-scrollbar-thumb {
+            background-color: #888; /* Color of the scrollbar thumb */
+            border-radius: 5px;
+        }
+        .controls-container::-webkit-scrollbar-track {
+            background-color: #f1f1f1; /* Color of the scrollbar track */
+        }
+        .control-row {
+            display: flex;
+            flex-wrap: nowrap; /* Prevent wrapping */
+            gap: 10px;
+            align-items: center;
+            min-width: 1000px; /* Ensures horizontal scrolling for very small windows */
+        }
+        input, select {
+            width: 70px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #444;
+            color: #fff;
+        }
+        label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        button {
+            padding: 5px 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: bold;  /* Add this line for bold text */
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #toggleButton {
+            margin-left: auto; /* Pushes the button to the right */
+        }
+        #animationStatus {
+            font-weight: bold;
+            color: #fff;
+            min-width: 60px;   /* Ensure consistent width */
+        }
+        #licenseButton {
+            margin-left: 10px; /* Adjust this value to set space between label and button */
+        }
+        canvas {
+            border: none;  /* Remove default border */
+            outline: none; /* Remove outline */
+            width: 100%;   /* Full width */
+            height: calc(100% - 200px); /* Adjust based on your controls height (top + bottom) */
+        }
+        .shape-controls {
+            width: 100%;
+            background-color: #333;
+            padding: 15px; /* Keep original padding for bottom UI */
+            box-sizing: border-box;
+            display: flex;
+            flex-wrap: nowrap; /* Prevent wrapping */
+            justify-content: space-between; 
+            align-items: center; 
+            overflow-x: auto; /* Enable horizontal scrolling */
+        }
+        .shape-control {
+            display:flex; 
+            align-items:center; 
+        }
+        .shape-control input[type="checkbox"] {
+            margin-right :2px; 
+        }
+        .shape-control input[type="color"] {
+            width :30px;   /* Fixed width for square shape */
+            height :30px;  /* Fixed height for square shape */
+            padding :0; 
+            border-radius :0; /* Keep corners sharp for a square shape */
+            overflow:hidden; 
+            margin-left :2px; 
+            border :none; /* Remove default border for color inputs */
+            cursor :pointer; /* Change cursor to pointer for better UX */
+            -webkit-appearance:none; /* Remove default styling in WebKit browsers */
+            appearance:none; /* Remove default styling in other browsers */
+            background-color:#444; /* Fallback color when not selected */
+            box-shadow:none; /* Ensure no shadow affects the shape */
+        }
+        .shape-control input[type="checkbox"] {
+            margin-right :2px; 
+        }
+        .shape-controls input[type="color"] {
+            width :30px;   /* Fixed width for square shape */
+            height :30px;  /* Fixed height for square shape */
+            padding :0; 
+            border-radius :0; /* Keep corners sharp for a square shape */
+            overflow:hidden; 
+            margin-left :2px; 
+            border :none; /* Remove default border for color inputs */
+            cursor :pointer; /* Change cursor to pointer for better UX */
+            -webkit-appearance:none; /* Remove default styling in WebKit browsers */
+            appearance:none; /* Remove default styling in other browsers */
+            background-color:#444; /* Fallback color when not selected */
+            box-shadow:none; /* Ensure no shadow affects the shape */
+        }
+        @media (max-width :1200px) {
+            .control-row {
+                flex-wrap : wrap; /* Allow wrapping on smaller screens */
+            }
+        }
+        @media (max-width :600px) {
+            .control-row {
+                flex-direction : column; 
+                align-items : flex-start; 
+            }
+            input, select {
+                width :100%; 
+                max-width :150px; 
+            }
+        }
+        .control-group {
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+	#calcFrequency,
+	#calcKeyStepFactor,
+	#calcKeyStepSelection {
+	    width: 150px; /* Adjust this value to your desired width */
+	}
+    </style>
+</head>
+<body>
+    <div class="controls-container">
+        <div class="control-row">
+            <button id="geometryButton">Geometry</button>
+            <button id="axisButton" title="Axis Setup | Placeholder - not implemented">Axis:</button>
+            <input type="number" id="axis" value="2" step="1" min="1" max="1024" title="Axis Count">
+            <select id="coordinateSystem" title="Coordinate Sytem">
+                <option value="orthogonal">Orthogonal</option>
+                <option value="radial" selected>Radial</option>
+            </select>
+            <button id="harmonicButton" title="Advanced Harmonics & Additive Synthesis Setup">Harmonics:</button>
+            <input type="number" id="harmonics" value="3" step="1" min="1" max="64" title="Harmonics Count">
+            <select id="harmonicsType" title="Harmonic Series Type">
+                <option value="singular">Single</option>
+                <option value="natural" selected>Natural</option>
+                <option value="octave">Octave</option>
+                <option value="numOdd">Odd</option>
+                <option value="numEven">Even</option>
+                <option value="numPrime">Prime</option>
+                <option value="numFibo">Fibona</option>
+                <option value="upper">Upper</option>
+                <option value="lower">Lower</option>
+                <option value="under">Under</option>
+            </select>
+            <select id="harmonicsPhase" title="Harmonic Series Phase">
+                <option value="phaseFull" selected>Full</option>
+                <option value="phaseUp">Up</option>
+                <option value="phaseDown">Down</option>
+            </select>
+            <button id="wavelengthButton" title="Waveform Calculator">Wavelength:</button>
+            <input type="number" id="wavelength" value="6" step="0.1" min="0.1" max="1024" title="Wavelength (m)">
+            <button id="resetAngleButton" title="Reset Angle to 0">Angle:</button>
+            <input type="number" id="rotationAngleInput" value="0" step="0.01" min="-6.28" max="6.28" title="Rotation Angle">
+            <button id="animationButton" title="Animations Setup | Placeholder - not implemented">Speed:</button>
+            <input type="number" id="rotationSpeedInput" value="0.1" step="0.01" min="-128.0" max="128.0" title="Rotation Speed">
+            <input type="range" id="rotationSpeedSlider" min="-128" max="128" step="0.01" value="0.1" title="Rotation Speed">
+	    <button id="toggleButton" title="Start Rotation !!! Warning: High speeds may cause visual discomfort and can create flashing elements that may trigger seizures in people with photosensitive epilepsy.">Start</button>
+            <span id="animationStatus">Stopped</span>
+        </div>
+    </div>
+    <canvas id="canvas"></canvas>
+    <div class="shape-controls">
+        <button id="fullscreenButton" title="Full Screen Mode">Fullscreen</button>
+        <input type="number" id="zoomManual" min="0.5" max="100" step="0.1" value="1" title="Zoom">
+        <div class="shape-control">
+            <input type="checkbox" id="playAddSynth" title="Start / Stop additive synthesis"><label for="playAddSynth">Audio</label>
+        </div>                  
+        <button id="loadButton">Load</button>
+        <button id="saveButton">Save</button>
+	<select id="exportFormat">
+	    <option value="png">PNG</option>
+	    <option value="jpeg">JPEG</option>
+	    <option value="webp">WebP</option>
+	    <option value="bmp">BMP</option>
+	    <option value="gif">GIF</option>
+	</select>
+	<button id="exportButton">Export</button>
+        <button id="licenseButton">License</button>
+    </div>     
+<!-- Waveform calculator Modal-->
+<div id="calculatorModal" style="display: none; position: fixed; top: 70px; left: 0; background-color: #333; border: 0; padding: 20px; z-index: 1000; color: white; max-height: 80vh; max-width: 300px; width: fixed; overflow-y: auto;">
+    <h3 style="margin-top: 0;">Wave Calculator</h3>
+    <div class="control-group">
+        <label for="calcFrequency">Frequency (Hz):</label> 
+        <input type="number" id="calcFrequency" min="20" max="22000" step="0.1" value="57.16666666666666">
+    </div>
+    <div class="control-group">
+        <label for="calcKeyStepSelection">Key Step:</label> 
+	<select id="calcKeyStepSelection" title="Manual Key Step (t/g or Page up/down keys)">
+	    <option value="custom">Custom</option>
+	    <optgroup label="Special Intervals">
+		<option value="GoldenRatio">(φ) Golden Ratio</option>
+		<option value="PentaRatio">(2π/5)​ Pi/Penta Ratio</option>
+		<option value="HexRatio">(2/√3)​ Hex Ratio</option>
+		<option value="HexPiRatio">(6/(π*√3))​ Hex/Pi Ratio</option>
+		<option value="PiRatio">(π/3)​ Pi Ratio</option>
+	    </optgroup>
+	    <optgroup label="Western Music Intervals">
+		<option value="MinSecond">Minor Second</option>
+		<option value="MajSecond" selected>Major Second</option>
+		<option value="MinThird">Minor Third</option>
+		<option value="MajThird">Major Third</option>
+		<option value="Fourth">Perfect Fourth</option>
+		<option value="Tritone">Tritone</option>
+		<option value="Fifth">Perfect Fifth</option>
+		<option value="MinSixth">Minor Sixth</option>
+		<option value="MajSixth">Major Sixth</option>
+		<option value="MinSeventh">Minor Seventh</option>
+		<option value="MajSeventh">Major Seventh</option>
+		<option value="Octave">Octave</option>
+	    </optgroup>
+	</select>
+    </div>
+    <div class="control-group">
+        <label for="calcKeyStepFactor">Step Factor:</label> 
+        <input type="number" id="calcKeyStepFactor" min="0" max="10" step="0.01" value="1.12246204830937" readonly>
+    </div>
+</div>
+
+<div id="licenseModal" style="display: none; position: fixed; top: 70px; left: 0; background-color: #333; border: 0; padding: 20px; z-index: 1000; color: white; max-height: 80vh; max-width: 600px; width: fixed; overflow-y: auto;">
+    <h3 style="margin-top: 0;">License</h3>
+    <p>© 2024 Felix Mönnich, AlienVoices.de. All rights reserved.</p>
+    <p>This software is provided "as is" without warranty of any kind.</p>
+    <button id="closeLicenseButton">Close</button>
+</div>
+
+<footer style="display: none">
+    <p>&copy; 2024 Felix Mönnich, AlienVoices.de. All rights reserved.</p>
+</footer>
+<script type="module">
+// Import EventGear directly
+import EventGear from './EventGear.js';
+
+// Initialize application manually
+document.addEventListener('DOMContentLoaded', () => {
+  console.log("Initializing application with direct EventGear import");
+  
+  // Create EventGear instance
+  const eventGear = new EventGear();
+  eventGear.start();
+  
+  // Basic canvas setup for testing
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  
+  // Set canvas size
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight - 200; // Account for controls
+    console.log(`Canvas resized: ${canvas.width}x${canvas.height}`);
+  }
+  
+  // Initial resize and event listener
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+  
+  // Draw a simple test pattern to verify canvas is working
+  function drawTestPattern() {
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw grid lines
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.lineWidth = 1;
+    
+    // Vertical lines
+    for (let x = 0; x < canvas.width; x += 50) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvas.height);
+      ctx.stroke();
+    }
+    
+    // Horizontal lines
+    for (let y = 0; y < canvas.height; y += 50) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvas.width, y);
+      ctx.stroke();
+    }
+    
+    // Draw a test circle
+    ctx.fillStyle = 'red';
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2, canvas.height / 2, 50, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Add text
+    ctx.fillStyle = 'white';
+    ctx.font = '20px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Debug Mode - Canvas Test', canvas.width / 2, 50);
+    ctx.fillText(`Canvas: ${canvas.width}x${canvas.height}`, canvas.width / 2, 80);
+    
+    console.log("Test pattern drawn to canvas");
+  }
+  
+  // Draw initial test pattern
+  drawTestPattern();
+  
+  // Set up minimal control functionality
+  document.getElementById('toggleButton').addEventListener('click', function() {
+    const status = document.getElementById('animationStatus');
+    if (status.textContent === 'Stopped') {
+      status.textContent = 'Running';
+      console.log("Animation started");
+    } else {
+      status.textContent = 'Stopped';
+      console.log("Animation stopped");
+    }
+  });
+  
+  // Log initialization complete
+  console.log("Application initialized in debug mode");
+});
+</script>
+</body>
+</html>
+

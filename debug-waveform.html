@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en" translate="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google" content="notranslate">
+    <title>HLC Bubble Debug Version</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            font-family: Arial, sans-serif;
+            background-color: #000000;
+            color: #ffffff;
+        }
+        .controls-container {
+            width: 100%;
+            background-color: #333;
+            padding: 15px;
+            box-sizing: border-box;
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 100px;
+        }
+        canvas {
+            border: 2px solid red;  /* Red border to make canvas visible */
+            outline: none;
+            width: 100%;
+            height: calc(100% - 200px);
+        }
+        .shape-controls {
+            width: 100%;
+            background-color: #333;
+            padding: 15px;
+            box-sizing: border-box;
+            display: flex;
+            flex-wrap: nowrap;
+            justify-content: space-between; 
+            align-items: center; 
+            overflow-x: auto;
+        }
+        button {
+            padding: 5px 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 0 5px;
+        }
+        #debug-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border: 1px solid #555;
+            max-width: 500px;
+            max-height: 200px;
+            overflow: auto;
+            z-index: 1000;
+        }
+        #debug-log {
+            font-family: monospace;
+            white-space: pre-wrap;
+            font-size: 12px;
+        }
+        .debug-success { color: #4CAF50; }
+        .debug-error { color: #F44336; }
+        .debug-warning { color: #FFC107; }
+        .debug-info { color: #2196F3; }
+    </style>
+</head>
+<body>
+    <div class="controls-container">
+        <div style="display: flex; align-items: center;">
+            <button id="testButton">Draw Test Pattern</button>
+            <button id="toggleButton">Toggle Animation</button>
+            <span id="animationStatus">Stopped</span>
+            <button id="debugImportsButton">Debug Imports</button>
+            <button id="clearLogButton">Clear Log</button>
+        </div>
+    </div>
+    
+    <canvas id="canvas"></canvas>
+    
+    <div class="shape-controls">
+        <button id="fullscreenButton">Fullscreen</button>
+        <button id="saveButton">Save Debug Info</button>
+    </div>
+
+    <div id="debug-panel">
+        <h3>Debug Console</h3>
+        <div id="debug-log"></div>
+    </div>
+
+    <script type="module">
+        // Debug logging system
+        const debugLog = document.getElementById('debug-log');
+        function log(message, type = 'info') {
+            const timestamp = new Date().toISOString().substring(11, 19);
+            const entry = document.createElement('div');
+            entry.textContent = `[${timestamp}] ${message}`;
+            entry.className = `debug-${type}`;
+            debugLog.appendChild(entry);
+            debugLog.scrollTop = debugLog.scrollHeight;
+            console[type === 'error' ? 'error' : type === 'warning' ? 'warn' : 'log'](message);
+        }
+
+        // Clear log
+        document.getElementById('clearLogButton').addEventListener('click', () => {
+            debugLog.innerHTML = '';
+            log('Log cleared', 'info');
+        });
+
+        // Save debug info
+        document.getElementById('saveButton').addEventListener('click', () => {
+            const debugData = {
+                log: debugLog.innerText,
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent,
+                canvas: {
+                    width: canvas.width,
+                    height: canvas.height
+                }
+            };
+            
+            const blob = new Blob([JSON.stringify(debugData, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `debug-${new Date().toISOString().replace(/:/g, '-')}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            log('Debug data saved to file', 'success');
+        });
+
+        // Handle imports debug
+        document.getElementById('debugImportsButton').addEventListener('click', async () => {
+            log('Testing imports...', 'info');
+            
+            try {
+                log('Trying to import EventGear from root...', 'info');
+                const rootModule = await import('./EventGear.js');
+                log('Root EventGear import successful', 'success');
+                
+                if (!rootModule.default) {
+                    log('Warning: Root module loaded but default export not found', 'warning');
+                }
+            } catch (error) {
+                log(`Root EventGear import failed: ${error.message}`, 'error');
+            }
+            
+            try {
+                log('Trying to import EventGear from utils directory...', 'info');
+                const utilsModule = await import('./src/utils/EventGear.js');
+                log('Utils EventGear import successful', 'success');
+                
+                if (!utilsModule.default) {
+                    log('Warning: Utils module loaded but default export not found', 'warning');
+                }
+            } catch (error) {
+                log(`Utils EventGear import failed: ${error.message}`, 'error');
+            }
+            
+            try {
+                log('Trying to import main.js...', 'info');
+                const mainModule = await import('./src/main.js');
+                log('Main.js import successful', 'success');
+            } catch (error) {
+                log(`Main.js import failed: ${error.message}`, 'error');
+            }
+        });
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', async () => {
+            log('Document loaded, initializing application...', 'info');
+            
+            try {
+                // Import EventGear from utils directory
+                log('Importing EventGear...', 'info');
+                const { default: EventGear } = await import('./src/utils/EventGear.js');
+                
+                log('EventGear import successful', 'success');
+                
+                // Initialize EventGear
+                const eventGear = new EventGear();
+                eventGear.start();
+                log('EventGear initialized and started', 'success');
+                
+                // Canvas setup
+                const canvas = document.getElementById('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                if (!ctx) {
+                    throw new Error('Could not get canvas context');
+                }
+                
+                log('Canvas context acquired', 'success');
+                
+                // Resize canvas to fit viewport
+                function resizeCanvas() {
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight - 200; // Account for top and bottom UI
+                    log(`Canvas resized: ${canvas.width}x${canvas.height}`, 'info');
+                    drawTestPattern(); // Redraw after resize
+                }
+                
+                window.addEventListener('resize', resizeCanvas);
+                resizeCanvas();
+                
+                // Draw test pattern function
+                function drawTestPattern() {
+                    try {
+                        // Clear canvas
+                        ctx.fillStyle = 'black';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        
+                        // Draw grid
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                        ctx.lineWidth = 1;
+                        
+                        // Draw vertical grid lines
+                        for (let x = 0; x < canvas.width; x += 50) {
+                            ctx.beginPath();
+                            ctx.moveTo(x, 0);
+                            ctx.lineTo(x, canvas.height);
+                            ctx.stroke();
+                        }
+                        
+                        // Draw horizontal grid lines
+                        for (let y = 0; y < canvas.height; y += 50) {
+                            ctx.beginPath();
+                            ctx.moveTo(0, y);
+                            ctx.lineTo(y < canvas.height, canvas.width);
+                            ctx.stroke();
+                        }
+                        
+                        // Draw a red circle in the center
+                        ctx.fillStyle = 'red';
+                        ctx.beginPath();
+                        ctx.arc(canvas.width / 2, canvas.height / 2, 50, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Add debug text
+                        ctx.fillStyle = 'white';
+                        ctx.font = '20px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('Debug Canvas - Test Pattern', canvas.width / 2, 50);
+                        ctx.fillText(`Canvas dimensions: ${canvas.width}x${canvas.height}`, canvas.width / 2, 80);
+                        
+                        log('Test pattern drawn successfully', 'success');
+                    } catch (error) {
+                        log(`Error drawing test pattern: ${error.message}`, 'error');
+                    }
+                }
+                
+                // Add event listener for test button
+                document.getElementById('testButton').addEventListener('click', () => {
+                    log('Drawing test pattern...', 'info');
+                    drawTestPattern();
+                });
+                
+                // Animation variables
+                let animating = false;
+                let animationId = null;
+                
+                // Simple animation function
+                function animate() {
+                    // Clear canvas
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    // Draw animated circle
+                    const time = Date.now() / 1000;
+                    const x = canvas.width / 2 + Math.sin(time) * 100;
+                    const y = canvas.height / 2 + Math.cos(time) * 100;
+                    
+                    ctx.fillStyle = `hsl(${(time * 50) % 360}, 100%, 50%)`;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 30, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Continue animation if still active
+                    if (animating) {
+                        animationId = requestAnimationFrame(animate);
+                    }
+                }
+                
+                // Toggle animation
+                document.getElementById('toggleButton').addEventListener('click', () => {
+                    animating = !animating;
+                    const status = document.getElementById('animationStatus');
+                    
+                    if (animating) {
+                        status.textContent = 'Running';
+                        animate();
+                        log('Animation started', 'info');
+                    } else {
+                        status.textContent = 'Stopped';
+                        if (animationId) {
+                            cancelAnimationFrame(animationId);
+                            animationId = null;
+                        }
+                        log('Animation stopped', 'info');
+                    }
+                });
+                
+                // Fullscreen button
+                document.getElementById('fullscreenButton').addEventListener('click', () => {
+                    if (!document.fullscreenElement) {
+                        document.documentElement.requestFullscreen().catch(err => {
+                            log(`Error attempting to enable fullscreen: ${err.message}`, 'error');
+                        });
+                        log('Entering fullscreen mode', 'info');
+                    } else {
+                        document.exitFullscreen();
+                        log('Exiting fullscreen mode', 'info');
+                    }
+                });
+                
+                // Register application events
+                eventGear.registerEvent({
+                    type: 'app.initialized',
+                    timestamp: performance.now()
+                });
+                
+                log('Application initialized successfully', 'success');
+                
+            } catch (error) {
+                log(`Initialization error: ${error.message}`, 'error');
+                log(`Error stack: ${error.stack}`, 'error');
+            }
+        });
+    </script>
+</body>
+</html> 

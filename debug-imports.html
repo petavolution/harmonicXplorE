@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HarmonicXplorer Import Debug</title>
+  <style>
+    body {
+      font-family: monospace;
+      background-color: #000;
+      color: #fff;
+      margin: 0;
+      padding: 20px;
+    }
+    #testCanvas {
+      border: 1px solid red;
+      background-color: #111;
+      display: block;
+      margin: 20px 0;
+    }
+    .debug-section {
+      margin-bottom: 20px;
+      border: 1px solid #333;
+      padding: 10px;
+    }
+    .success {
+      color: #4CAF50;
+    }
+    .error {
+      color: #F44336;
+    }
+    button {
+      margin: 5px;
+      padding: 5px 10px;
+    }
+    #log {
+      border: 1px solid #444;
+      padding: 10px;
+      height: 200px;
+      overflow-y: auto;
+      background-color: #111;
+    }
+  </style>
+</head>
+<body>
+  <h1>HarmonicXplorer Import Debugging</h1>
+  
+  <div class="debug-section">
+    <h2>Import Test</h2>
+    <div id="importStatus">Testing imports...</div>
+    <button id="testImportsButton">Test Imports</button>
+  </div>
+  
+  <div class="debug-section">
+    <h2>Canvas Test</h2>
+    <canvas id="testCanvas" width="400" height="200"></canvas>
+    <button id="testCanvasButton">Test Canvas Rendering</button>
+  </div>
+  
+  <div class="debug-section">
+    <h2>File Path Test</h2>
+    <div id="pathStatus">Checking file paths...</div>
+    <button id="testPathsButton">Test Paths</button>
+  </div>
+  
+  <div class="debug-section">
+    <h2>Debug Log</h2>
+    <div id="log"></div>
+  </div>
+
+  <script type="module">
+    // Log helper function
+    function log(message, isError = false) {
+      const logElement = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.textContent = `[${new Date().toISOString().slice(11, 19)}] ${message}`;
+      entry.className = isError ? 'error' : 'success';
+      logElement.appendChild(entry);
+      logElement.scrollTop = logElement.scrollHeight;
+      console[isError ? 'error' : 'log'](message);
+    }
+
+    // Test imports
+    document.getElementById('testImportsButton').addEventListener('click', async () => {
+      const importStatus = document.getElementById('importStatus');
+      
+      log('Testing direct EventGear import...');
+      try {
+        const module = await import('../../EventGear.js');
+        if (module.default) {
+          importStatus.textContent = 'Root EventGear import successful';
+          importStatus.className = 'success';
+          log('Root EventGear import successful');
+        } else {
+          throw new Error('Module loaded but default export not found');
+        }
+      } catch (error) {
+        importStatus.textContent = `Root EventGear import failed: ${error.message}`;
+        importStatus.className = 'error';
+        log(`Root EventGear import failed: ${error.message}`, true);
+      }
+      
+      log('Testing utils path EventGear import...');
+      try {
+        const module = await import('../../src/utils/EventGear.js');
+        if (module.default) {
+          log('Utils EventGear import successful');
+        } else {
+          throw new Error('Module loaded but default export not found');
+        }
+      } catch (error) {
+        log(`Utils EventGear import failed: ${error.message}`, true);
+      }
+    });
+
+    // Test canvas
+    document.getElementById('testCanvasButton').addEventListener('click', () => {
+      const canvas = document.getElementById('testCanvas');
+      if (!canvas) {
+        log('Canvas element not found', true);
+        return;
+      }
+      
+      try {
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          log('Failed to get canvas context', true);
+          return;
+        }
+        
+        // Clear canvas
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw test pattern
+        ctx.fillStyle = 'red';
+        ctx.beginPath();
+        ctx.arc(canvas.width / 2, canvas.height / 2, 40, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Add text
+        ctx.fillStyle = 'white';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Canvas API Working', canvas.width / 2, canvas.height / 2 + 5);
+        
+        log('Canvas rendering test successful');
+      } catch (error) {
+        log(`Canvas rendering failed: ${error.message}`, true);
+      }
+    });
+
+    // Test file paths
+    document.getElementById('testPathsButton').addEventListener('click', async () => {
+      const pathStatus = document.getElementById('pathStatus');
+      const pathsToCheck = [
+        'EventGear.js',
+        'src/main.js',
+        'src/utils/EventGear.js',
+        'src/utils/NeuroNetManager.js',
+        'src/core/Visualizer.js'
+      ];
+      
+      let results = '';
+      
+      for (const path of pathsToCheck) {
+        try {
+          const response = await fetch(path, { method: 'HEAD' });
+          const exists = response.ok;
+          results += `${path}: ${exists ? 'EXISTS' : 'NOT FOUND'}\n`;
+          log(`Path check: ${path} - ${exists ? 'EXISTS' : 'NOT FOUND'}`);
+        } catch (error) {
+          results += `${path}: ERROR - ${error.message}\n`;
+          log(`Path check error: ${path} - ${error.message}`, true);
+        }
+      }
+      
+      pathStatus.textContent = results;
+    });
+
+    // Attempt to load EventGear on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      log('Page loaded, checking environment...');
+      
+      // Check if browser supports modules
+      if (typeof import === 'function') {
+        log('Browser supports ES modules');
+      } else {
+        log('Browser may not support ES modules', true);
+      }
+      
+      // Check if canvas is supported
+      const canvas = document.getElementById('testCanvas');
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        log('Canvas API is supported');
+        // Draw basic indicator
+        ctx.fillStyle = 'gray';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'white';
+        ctx.font = '14px Arial';
+        ctx.fillText('Click "Test Canvas Rendering" to test', 200, 100);
+      } else {
+        log('Canvas API may not be supported', true);
+      }
+    });
+  </script>
+</body>
+</html> 

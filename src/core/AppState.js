@@ -35,6 +35,9 @@ export default class AppState {
     this.stateHistory = [];
     this.historyIndex = -1;
     this.maxHistorySize = 50;
+
+    // Cached computed data (e.g., sin/cos values for rotation)
+    this.cachedData = {};
     
     // Performance metrics for state changes
     this.metrics = {
@@ -442,6 +445,31 @@ export default class AppState {
    */
   getAllParams() {
     return { ...this.params };
+  }
+
+  /**
+   * Gets cached computed data
+   * @param {string} key - Cache key
+   * @returns {any} - Cached value or undefined
+   */
+  getCachedData(key) {
+    return this.cachedData[key];
+  }
+
+  /**
+   * Sets cached computed data
+   * @param {string} key - Cache key
+   * @param {any} value - Value to cache
+   */
+  setCachedData(key, value) {
+    this.cachedData[key] = value;
+  }
+
+  /**
+   * Clears all cached data
+   */
+  clearCachedData() {
+    this.cachedData = {};
   }
   
   /**

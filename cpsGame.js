@@ -1,4 +1,4 @@
-import EventGear from './EventGear.js';
+import EventGear from './src/utils/EventGear.js';
 // Initialize ClickCounter
 const ClickCounter = new EventGear(1000); // Allow for 1000 historical entries
 

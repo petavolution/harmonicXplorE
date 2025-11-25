@@ -207,4 +207,16 @@ export default class HarmonicSeries {
   clearCache() {
     this.cache.clear();
   }
+
+  /**
+   * Cleans up resources when the module is no longer needed
+   */
+  dispose() {
+    // Clear cache to free memory
+    this.cache.clear();
+
+    // EventGear listeners are managed by EventGear itself
+
+    console.log('HarmonicSeries disposed');
+  }
 } 

@@ -1,8 +1,26 @@
 /**
- * main-simple.js
+ * main-simple.js (RECOMMENDED ENTRY POINT)
  *
- * Simplified entry point for HarmonicXplorer application.
- * Refactored for clarity, maintainability, and simplicity.
+ * Simplified, optimized entry point for HarmonicXplorer application.
+ * Refactored for clarity, maintainability, and performance.
+ *
+ * This is the recommended entry point for most users, focusing on:
+ * - Core harmonic visualization functionality
+ * - Clean, maintainable code structure (~150 lines)
+ * - Optimal performance with conditional features
+ * - Error handling with user-friendly messages
+ * - Clear initialization sequence
+ *
+ * Features included:
+ * ✓ Real-time harmonic visualization
+ * ✓ Interactive controls (frequency, harmonics, coordinate systems)
+ * ✓ Geometry rendering (circle, axis, polygons)
+ * ✓ Audio synthesis (optional)
+ * ✓ FPS monitoring (optional)
+ * ✓ Debug API (when enabled in config)
+ *
+ * For advanced features (WebSocket, Neural Network, WaveformCalculator),
+ * see main.js (full-featured version).
  */
 
 import EventGear from './utils/EventGear.js';

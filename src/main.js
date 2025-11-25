@@ -1,6 +1,21 @@
 /**
- * main.js
- * 
+ * main.js (LEGACY - Full-Featured Version)
+ *
+ * NOTE: This is the original, full-featured entry point with extensive
+ * configuration options, debug features, WebSocket support, and neural
+ * network integration. For most use cases, use main-simple.js instead.
+ *
+ * RECOMMENDED: See main-simple.js for the simplified, optimized entry point.
+ * The simplified version focuses on core functionality with better performance
+ * and easier maintainability (~150 lines vs 1054 lines).
+ *
+ * This file is maintained for advanced users who need:
+ * - WebSocket event streaming
+ * - Neural network visualization
+ * - Extensive performance monitoring
+ * - Waveform calculator integration
+ * - Advanced debugging features
+ *
  * Entry point for the HarmonicXplorer application.
  * Initializes all modules and sets up the event-driven architecture.
  */

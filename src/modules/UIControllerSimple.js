@@ -10,6 +10,17 @@ export default class UIControllerSimple {
     this.eventGear = eventGear;
     this.appState = appState;
     this.audioPlaying = false;
+
+    // Store handler references for cleanup
+    this.handlers = {
+      frequency: null,
+      harmonics: null,
+      harmonicsType: null,
+      coordinateSystem: null,
+      audioToggle: null,
+      reset: null,
+      fpsToggle: null
+    };
   }
 
   /**
@@ -29,58 +40,63 @@ export default class UIControllerSimple {
     // Frequency control
     const frequency = document.getElementById('frequency');
     if (frequency) {
-      frequency.addEventListener('input', (e) => {
+      this.handlers.frequency = (e) => {
         const value = parseFloat(e.target.value);
         this.appState.updateParam('calcFrequency', value);
-      });
+      };
+      frequency.addEventListener('input', this.handlers.frequency);
     }
 
     // Harmonics count control
     const harmonics = document.getElementById('harmonics');
     const harmonicsValue = document.getElementById('harmonics-value');
     if (harmonics) {
-      harmonics.addEventListener('input', (e) => {
+      this.handlers.harmonics = (e) => {
         const value = parseInt(e.target.value);
         this.appState.updateParam('harmonics', value);
         if (harmonicsValue) {
           harmonicsValue.textContent = value;
         }
-      });
+      };
+      harmonics.addEventListener('input', this.handlers.harmonics);
     }
 
     // Harmonics type control
     const harmonicsType = document.getElementById('harmonicsType');
     if (harmonicsType) {
-      harmonicsType.addEventListener('change', (e) => {
+      this.handlers.harmonicsType = (e) => {
         this.appState.updateParam('harmonicsType', e.target.value);
-      });
+      };
+      harmonicsType.addEventListener('change', this.handlers.harmonicsType);
     }
 
     // Coordinate system control
     const coordinateSystem = document.getElementById('coordinateSystem');
     if (coordinateSystem) {
-      coordinateSystem.addEventListener('change', (e) => {
+      this.handlers.coordinateSystem = (e) => {
         this.appState.updateParam('coordinateSystem', e.target.value);
-      });
+      };
+      coordinateSystem.addEventListener('change', this.handlers.coordinateSystem);
     }
 
     // Audio toggle button
     const audioToggle = document.getElementById('audio-toggle');
     if (audioToggle) {
-      audioToggle.addEventListener('click', () => {
+      this.handlers.audioToggle = () => {
         this.audioPlaying = !this.audioPlaying;
         this.eventGear.emit('audio.toggle', {
           play: this.audioPlaying
         });
         audioToggle.textContent = this.audioPlaying ? 'Stop Audio' : 'Play Audio';
         audioToggle.classList.toggle('stop', this.audioPlaying);
-      });
+      };
+      audioToggle.addEventListener('click', this.handlers.audioToggle);
     }
 
     // Reset button
     const reset = document.getElementById('reset');
     if (reset) {
-      reset.addEventListener('click', () => {
+      this.handlers.reset = () => {
         this.appState.resetToDefaults();
         this.syncUIWithState();
         if (this.audioPlaying) {
@@ -91,10 +107,11 @@ export default class UIControllerSimple {
             audioToggle.classList.remove('stop');
           }
         }
-      });
+      };
+      reset.addEventListener('click', this.handlers.reset);
     }
 
-    // Update FPS display if it exists
+    // Update FPS display if it exists (EventGear listener, managed by EventGear)
     this.eventGear.on('visualizer.fpsUpdate', (data) => {
       const fpsValue = document.getElementById('fps-value');
       if (fpsValue) {
@@ -112,9 +129,10 @@ export default class UIControllerSimple {
       fpsCounter.style.cursor = 'pointer';
       fpsCounter.title = 'Click to toggle FPS display';
 
-      fpsCounter.addEventListener('click', () => {
+      this.handlers.fpsToggle = () => {
         fpsCounter.classList.toggle('hidden');
-      });
+      };
+      fpsCounter.addEventListener('click', this.handlers.fpsToggle);
     }
   }
 
@@ -144,5 +162,59 @@ export default class UIControllerSimple {
     if (harmonicsValue) {
       harmonicsValue.textContent = params.harmonics;
     }
+  }
+
+  /**
+   * Cleans up resources when the module is no longer needed
+   */
+  dispose() {
+    // Remove DOM event listeners
+    const elements = {
+      frequency: document.getElementById('frequency'),
+      harmonics: document.getElementById('harmonics'),
+      harmonicsType: document.getElementById('harmonicsType'),
+      coordinateSystem: document.getElementById('coordinateSystem'),
+      audioToggle: document.getElementById('audio-toggle'),
+      reset: document.getElementById('reset'),
+      fpsCounter: document.getElementById('fps-counter')
+    };
+
+    // Remove each listener if element and handler exist
+    if (elements.frequency && this.handlers.frequency) {
+      elements.frequency.removeEventListener('input', this.handlers.frequency);
+    }
+    if (elements.harmonics && this.handlers.harmonics) {
+      elements.harmonics.removeEventListener('input', this.handlers.harmonics);
+    }
+    if (elements.harmonicsType && this.handlers.harmonicsType) {
+      elements.harmonicsType.removeEventListener('change', this.handlers.harmonicsType);
+    }
+    if (elements.coordinateSystem && this.handlers.coordinateSystem) {
+      elements.coordinateSystem.removeEventListener('change', this.handlers.coordinateSystem);
+    }
+    if (elements.audioToggle && this.handlers.audioToggle) {
+      elements.audioToggle.removeEventListener('click', this.handlers.audioToggle);
+    }
+    if (elements.reset && this.handlers.reset) {
+      elements.reset.removeEventListener('click', this.handlers.reset);
+    }
+    if (elements.fpsCounter && this.handlers.fpsToggle) {
+      elements.fpsCounter.removeEventListener('click', this.handlers.fpsToggle);
+    }
+
+    // Clear handler references
+    this.handlers = {
+      frequency: null,
+      harmonics: null,
+      harmonicsType: null,
+      coordinateSystem: null,
+      audioToggle: null,
+      reset: null,
+      fpsToggle: null
+    };
+
+    // EventGear listeners are managed by EventGear itself
+
+    console.log('UIControllerSimple disposed');
   }
 }

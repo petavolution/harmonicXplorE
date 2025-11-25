@@ -44,17 +44,18 @@ export default class GeometryRenderer {
     this.eventGear.on('parameterChanged', () => {
       this.renderState.needsRedraw = true;
     });
-    
+
     // Listen for waveform updates
     this.eventGear.on('waveform.calculated', (data) => {
       this.renderState.lastWaveformData = data.waveformData;
       this.renderState.needsRedraw = true;
     });
-    
-    // Handle window resize
-    window.addEventListener('resize', () => {
+
+    // Handle window resize (store reference for cleanup)
+    this.resizeHandler = () => {
       this.handleResize();
-    });
+    };
+    window.addEventListener('resize', this.resizeHandler);
   }
   
   /**
@@ -346,5 +347,20 @@ export default class GeometryRenderer {
    */
   forceRedraw() {
     this.renderState.needsRedraw = true;
+  }
+
+  /**
+   * Cleans up resources when the module is no longer needed
+   */
+  dispose() {
+    // Remove window resize listener
+    if (this.resizeHandler) {
+      window.removeEventListener('resize', this.resizeHandler);
+    }
+
+    // EventGear listeners are managed by EventGear itself
+    // Canvas context doesn't need explicit cleanup
+
+    console.log('GeometryRenderer disposed');
   }
 } 

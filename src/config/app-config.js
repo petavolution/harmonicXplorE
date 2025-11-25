@@ -64,6 +64,25 @@ export const AppConfig = {
     rotationSpeed: 0.01,
     zoomManual: 1.0,
 
+    // Shape visibility
+    showAxis: true,
+    showCircle: true,
+    showHex: false,
+    showHexIn: false,
+    showSquare: false,
+    showSquareIn: false,
+    showTriangle: false,
+    showWave: false,
+
+    // Shape colors
+    AxisColor: '#444444',
+    circleColor: '#00ff00',
+    hexColor: '#ff00ff',
+    hexInColor: '#ffff00',
+    squareColor: '#00ffff',
+    squareInColor: '#ff8800',
+    triangleColor: '#ff0088',
+
     // Audio parameters
     isAddSynthPlaying: false,
     calcFrequency: 440,

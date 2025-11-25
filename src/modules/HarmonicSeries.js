@@ -9,16 +9,19 @@ export default class HarmonicSeries {
   constructor(eventGear, appState) {
     this.eventGear = eventGear;
     this.appState = appState;
-    
+
     // Cache for memoization
     this.cache = new Map();
-    
+
     // Listen for parameter changes that would affect harmonic series
     this.eventGear.on('parameterChanged', (data) => {
-      if (['harmonics', 'harmonicsType', 'harmonicsPhase', 'init'].includes(data.key)) {
+      if (['harmonics', 'harmonicsType', 'harmonicsPhase', 'init'].includes(data.param)) {
         this.updateSeries();
       }
     });
+
+    // Generate initial harmonic series
+    this.updateSeries();
   }
   
   /**

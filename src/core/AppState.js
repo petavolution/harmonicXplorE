@@ -1,35 +1,18 @@
 /**
  * AppState.js
- * 
+ *
  * Manages application state and provides a centralized store for parameters.
  * Uses EventGear for communication with other modules.
  */
 
+import { AppConfig } from '../config/app-config.js';
+
 export default class AppState {
   constructor(eventGear) {
     this.eventGear = eventGear;
-    
-    // Application parameters with default values
-    this.params = {
-      // Visualization parameters
-      axis: 3,
-      coordinateSystem: 'cartesian',
-      harmonics: 8,
-      harmonicsType: 'sine',
-      harmonicsPhase: 'cosine',
-      wavelength: 1.0,
-      rotationAngle: 0.0,
-      rotationSpeed: 0.01,
-      zoomManual: 1.0,
-      
-      // Audio parameters
-      isAddSynthPlaying: false,
-      calcFrequency: 440,
-      
-      // System parameters
-      fps: 0,
-      calculationTime: 0
-    };
+
+    // Application parameters from configuration
+    this.params = { ...AppConfig.defaults };
     
     // State change history for undo/redo functionality
     this.stateHistory = [];
@@ -678,26 +661,7 @@ export default class AppState {
    * Resets state to default values
    */
   resetToDefaults() {
-    const defaultParams = {
-      // Visualization parameters
-      axis: 3,
-      coordinateSystem: 'cartesian',
-      harmonics: 8,
-      harmonicsType: 'sine',
-      harmonicsPhase: 'cosine',
-      wavelength: 1.0,
-      rotationAngle: 0.0,
-      rotationSpeed: 0.01,
-      zoomManual: 1.0,
-      
-      // Audio parameters
-      isAddSynthPlaying: false,
-      calcFrequency: 440,
-      
-      // System parameters
-      fps: 0,
-      calculationTime: 0
-    };
+    const defaultParams = { ...AppConfig.defaults };
     
     // Get current state for history
     const currentState = { ...this.params };

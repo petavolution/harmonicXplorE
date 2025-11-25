@@ -90,7 +90,38 @@ export const AppConfig = {
     // System parameters
     fps: 0,
     calculationTime: 0
+  },
+
+  // Parameter constraints for validation
+  constraints: {
+    calcFrequency: { min: 20, max: 20000 },      // Human hearing range
+    harmonics: { min: 1, max: 32 },               // Reasonable harmonic count
+    rotationSpeed: { min: -0.5, max: 0.5 },       // Prevent extreme rotation
+    zoomManual: { min: 0.1, max: 10 },            // Reasonable zoom range
+    axis: { min: 1, max: 12 }                     // Reasonable axis count
   }
 };
+
+/**
+ * Validates and clamps a parameter value to its constraints
+ * @param {string} param - Parameter name
+ * @param {any} value - Value to validate
+ * @returns {any} - Validated/clamped value
+ */
+export function validateParam(param, value) {
+  // If no constraints defined, return value as-is
+  if (!AppConfig.constraints[param]) {
+    return value;
+  }
+
+  const { min, max } = AppConfig.constraints[param];
+
+  // For numeric values, clamp to range
+  if (typeof value === 'number' && !isNaN(value)) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  return value;
+}
 
 export default AppConfig;

@@ -5,6 +5,8 @@
  * Works with the simplified index.html structure.
  */
 
+import { validateParam } from '../config/app-config.js';
+
 export default class UIControllerSimple {
   constructor(eventGear, appState) {
     this.eventGear = eventGear;
@@ -37,25 +39,37 @@ export default class UIControllerSimple {
    * Sets up basic control event listeners
    */
   setupBasicControls() {
-    // Frequency control
+    // Frequency control (with validation)
     const frequency = document.getElementById('frequency');
     if (frequency) {
       this.handlers.frequency = (e) => {
-        const value = parseFloat(e.target.value);
-        this.appState.updateParam('calcFrequency', value);
+        const rawValue = parseFloat(e.target.value);
+        const validValue = validateParam('calcFrequency', rawValue);
+        this.appState.updateParam('calcFrequency', validValue);
+
+        // Update input if value was clamped
+        if (validValue !== rawValue) {
+          e.target.value = validValue;
+        }
       };
       frequency.addEventListener('input', this.handlers.frequency);
     }
 
-    // Harmonics count control
+    // Harmonics count control (with validation)
     const harmonics = document.getElementById('harmonics');
     const harmonicsValue = document.getElementById('harmonics-value');
     if (harmonics) {
       this.handlers.harmonics = (e) => {
-        const value = parseInt(e.target.value);
-        this.appState.updateParam('harmonics', value);
+        const rawValue = parseInt(e.target.value);
+        const validValue = validateParam('harmonics', rawValue);
+        this.appState.updateParam('harmonics', validValue);
         if (harmonicsValue) {
-          harmonicsValue.textContent = value;
+          harmonicsValue.textContent = validValue;
+        }
+
+        // Update input if value was clamped
+        if (validValue !== rawValue) {
+          e.target.value = validValue;
         }
       };
       harmonics.addEventListener('input', this.handlers.harmonics);

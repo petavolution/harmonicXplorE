@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HarmonicXplorer - Interactive Harmonic Series Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        #controls {
+            background: rgba(20, 20, 20, 0.95);
+            padding: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group label {
+            font-size: 14px;
+            color: #aaa;
+            min-width: 80px;
+        }
+
+        .control-group input,
+        .control-group select {
+            padding: 6px 10px;
+            border: 1px solid #444;
+            background: #222;
+            color: #fff;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .control-group input[type="range"] {
+            width: 120px;
+        }
+
+        .control-group input[type="number"] {
+            width: 80px;
+        }
+
+        button {
+            padding: 8px 16px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        button.stop {
+            background: #f44336;
+        }
+
+        button.stop:hover {
+            background: #da190b;
+        }
+
+        #visualization {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        #fps-counter {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: monospace;
+            color: #0f0;
+            z-index: 50;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        h1 {
+            font-size: 20px;
+            margin-right: auto;
+            background: linear-gradient(90deg, #4CAF50, #2196F3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <h1>HarmonicXplorer</h1>
+
+        <div class="control-group">
+            <label for="frequency">Frequency:</label>
+            <input type="number" id="frequency" min="20" max="2000" value="440" step="1">
+            <span>Hz</span>
+        </div>
+
+        <div class="control-group">
+            <label for="harmonics">Harmonics:</label>
+            <input type="range" id="harmonics" min="1" max="32" value="8" step="1">
+            <span id="harmonics-value">8</span>
+        </div>
+
+        <div class="control-group">
+            <label for="harmonicsType">Type:</label>
+            <select id="harmonicsType">
+                <option value="natural">Natural</option>
+                <option value="octave">Octave</option>
+                <option value="numOdd">Odd</option>
+                <option value="numEven">Even</option>
+                <option value="numPrime">Prime</option>
+                <option value="numFibo">Fibonacci</option>
+                <option value="upper">Upper</option>
+                <option value="lower">Lower</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="coordinateSystem">View:</label>
+            <select id="coordinateSystem">
+                <option value="cartesian">Cartesian</option>
+                <option value="radial">Radial</option>
+            </select>
+        </div>
+
+        <button id="audio-toggle">Play Audio</button>
+        <button id="reset">Reset</button>
+    </div>
+
+    <div id="visualization">
+        <canvas id="canvas"></canvas>
+        <div id="fps-counter" class="hidden">FPS: <span id="fps-value">60</span></div>
+    </div>
+
+    <!-- Load the application -->
+    <script type="module" src="./src/main-simple.js"></script>
+</body>
+</html>

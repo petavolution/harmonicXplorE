@@ -75,9 +75,8 @@ export default class GeometryRenderer {
    * @param {number} deltaTime - Time since last frame
    */
   render(timestamp, deltaTime) {
-    // Skip rendering if not needed
-    if (!this.renderState.needsRedraw) return;
-    
+    // Always render when called from animation frame (for continuous rotation)
+    // Skip only if explicitly paused (future feature)
     const startTime = performance.now();
     
     // Clear canvas
@@ -99,10 +98,7 @@ export default class GeometryRenderer {
     // Update metrics
     this.metrics.frameTime = performance.now() - startTime;
     this.metrics.frameCount++;
-    
-    // Reset needs redraw flag
-    this.renderState.needsRedraw = false;
-    
+
     // Emit metrics
     if (this.metrics.frameCount % 60 === 0) {
       this.eventGear.emit('render.metrics', { ...this.metrics });

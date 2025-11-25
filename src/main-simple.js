@@ -123,6 +123,16 @@ function initializeApp() {
     console.log('🐛 Debug API available: harmonicXplorerDebug');
   }
 
+  // Initialize rotation cache before starting
+  const initialAngle = appState.getParam('rotationAngle');
+  const initialRadians = initialAngle * Math.PI / 180;
+  appState.setCachedData('angleSinCos', {
+    sin: Math.sin(initialRadians),
+    cos: Math.cos(initialRadians),
+    angle: initialAngle,
+    radians: initialRadians
+  });
+
   // Initialize UI and start visualization
   uiController.initialize();
   visualizer.start();

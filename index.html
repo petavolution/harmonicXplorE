@@ -112,7 +112,7 @@
         }
 
         .hidden {
-            display: none;
+            display: none !important;
         }
 
         h1 {
@@ -165,11 +165,15 @@
 
         <button id="audio-toggle">Play Audio</button>
         <button id="reset">Reset</button>
+
+        <div style="margin-left: auto; font-size: 12px; color: #666;">
+            Press F12 for debug console
+        </div>
     </div>
 
     <div id="visualization">
         <canvas id="canvas"></canvas>
-        <div id="fps-counter" class="hidden">FPS: <span id="fps-value">60</span></div>
+        <div id="fps-counter">FPS: <span id="fps-value">60</span></div>
     </div>
 
     <!-- Load the application -->

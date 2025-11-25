@@ -17,6 +17,7 @@ export default class UIControllerSimple {
    */
   initialize() {
     this.setupBasicControls();
+    this.setupFPSToggle();
     this.syncUIWithState();
     console.log('✅ UI Controller initialized');
   }
@@ -100,6 +101,21 @@ export default class UIControllerSimple {
         fpsValue.textContent = data.fps.toFixed(0);
       }
     });
+  }
+
+  /**
+   * Sets up FPS display toggle (click FPS counter to toggle)
+   */
+  setupFPSToggle() {
+    const fpsCounter = document.getElementById('fps-counter');
+    if (fpsCounter) {
+      fpsCounter.style.cursor = 'pointer';
+      fpsCounter.title = 'Click to toggle FPS display';
+
+      fpsCounter.addEventListener('click', () => {
+        fpsCounter.classList.toggle('hidden');
+      });
+    }
   }
 
   /**

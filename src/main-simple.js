@@ -41,7 +41,8 @@ function initializeApp() {
   // Initialize core state
   const appState = new AppState(eventGear);
   const visualizer = new Visualizer(eventGear, {
-    showFPS: AppConfig.debug.showFPS
+    showFPS: AppConfig.debug.showFPS,
+    performanceTracking: AppConfig.debug.logPerformance  // Only track if debug enabled
   });
 
   // Get or create canvas

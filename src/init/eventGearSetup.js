@@ -82,43 +82,31 @@ export function setupEventGear(eventGear, sessionId) {
 
 /**
  * Connects component events
+ * Note: Most modules register their own event listeners in constructors.
+ * This function only handles cross-component connections that can't be
+ * self-contained within individual modules.
+ *
  * @param {EventGear} eventGear - EventGear instance
  * @param {Object} components - Object containing component instances
  */
 export function connectComponentEvents(eventGear, components) {
-  const { visualizer, appState, harmonicSeries, waveformCalculator,
-          geometryRenderer, audioSynthesis, uiController, neuroNetManager } = components;
+  const { waveformCalculator } = components;
 
-  // Register visualizer events
-  visualizer.setupEventCallbacks();
-  visualizer.registerVisualizerEvents();
-
-  // Connect state to modules
-  eventGear.on('parameterChanged', (data) => {
-    // Harmonic series listens for parameter changes
-    if (['harmonics', 'harmonicsType', 'harmonicsPhase'].includes(data.param)) {
-      harmonicSeries.updateSeries();
-    }
-  });
-
-  // Connect harmonic updates to waveform calculator
-  eventGear.on('harmonicSeries.updated', (data) => {
-    if (waveformCalculator && typeof waveformCalculator.calculate === 'function') {
+  // Connect harmonic updates to waveform calculator (if present)
+  // This is a cross-module connection that can't be in either module
+  if (waveformCalculator && typeof waveformCalculator.calculate === 'function') {
+    eventGear.on('harmonicSeries.updated', (data) => {
       waveformCalculator.calculate(data.harmonicSeries);
-    }
-  });
-
-  // Connect audio to state changes
-  eventGear.on('parameterChanged', (data) => {
-    if (data.param === 'calcFrequency' && audioSynthesis.isPlaying) {
-      audioSynthesis.updateFrequency(data.value);
-    }
-  });
+    });
+  }
 
   // Register connection completion
   eventGear.emit('app.connectionsEstablished', {
-    timestamp: performance.now()
+    timestamp: performance.now(),
+    modulesConnected: true
   });
+
+  console.log('✅ Event connections established');
 }
 
 /**

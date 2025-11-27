@@ -58,8 +58,8 @@ export default class AudioSynthesis {
     
     // Listen for frequency changes (emitted by AppState)
     this.eventGear.on('parameterChanged', (data) => {
-      if (data.key === 'calcFrequency' && this.isPlaying) {
-        this.updateFrequency(data.newValue);
+      if (data.param === 'calcFrequency' && this.isPlaying) {
+        this.updateFrequency(data.value);
       }
     });
   }

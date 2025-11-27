@@ -44,17 +44,18 @@ export default class GeometryRenderer {
     this.eventGear.on('parameterChanged', () => {
       this.renderState.needsRedraw = true;
     });
-    
+
     // Listen for waveform updates
     this.eventGear.on('waveform.calculated', (data) => {
       this.renderState.lastWaveformData = data.waveformData;
       this.renderState.needsRedraw = true;
     });
-    
-    // Handle window resize
-    window.addEventListener('resize', () => {
+
+    // Handle window resize (store reference for cleanup)
+    this.resizeHandler = () => {
       this.handleResize();
-    });
+    };
+    window.addEventListener('resize', this.resizeHandler);
   }
   
   /**
@@ -64,9 +65,55 @@ export default class GeometryRenderer {
     // Set canvas width and height
     this.canvas.width = this.canvas.clientWidth;
     this.canvas.height = this.canvas.clientHeight;
-    
+
     // Force redraw
     this.renderState.needsRedraw = true;
+  }
+
+  /**
+   * Helper: Sets up stroke style and dash pattern
+   * @param {string} color - Stroke color
+   * @param {number} lineWidth - Line width
+   * @param {boolean} isDashed - Whether to use dashed lines
+   */
+  setupStroke(color, lineWidth = 2, isDashed = false) {
+    this.ctx.strokeStyle = color;
+    this.ctx.lineWidth = lineWidth;
+    this.ctx.setLineDash(isDashed ? [5, 5] : []);
+  }
+
+  /**
+   * Helper: Draws a regular polygon (triangle, square, hexagon, etc.)
+   * @param {number} centerX - X center position
+   * @param {number} centerY - Y center position
+   * @param {number} radius - Polygon radius
+   * @param {number} sides - Number of sides
+   * @param {string} color - Stroke color
+   * @param {boolean} isDashed - Whether to use dashed lines
+   * @param {Object} angleSinCos - Rotation values
+   */
+  drawRegularPolygon(centerX, centerY, radius, sides, color, isDashed, angleSinCos) {
+    this.setupStroke(color, 2, isDashed);
+
+    const angleStep = (2 * Math.PI) / sides;
+    const startAngle = Math.atan2(angleSinCos.sin, angleSinCos.cos);
+
+    this.ctx.beginPath();
+
+    for (let i = 0; i <= sides; i++) {
+      const angle = i * angleStep + startAngle;
+      const x = centerX + radius * Math.cos(angle);
+      const y = centerY + radius * Math.sin(angle);
+
+      if (i === 0) {
+        this.ctx.moveTo(x, y);
+      } else {
+        this.ctx.lineTo(x, y);
+      }
+    }
+
+    this.ctx.stroke();
+    this.ctx.setLineDash([]); // Reset dash pattern
   }
   
   /**
@@ -75,9 +122,8 @@ export default class GeometryRenderer {
    * @param {number} deltaTime - Time since last frame
    */
   render(timestamp, deltaTime) {
-    // Skip rendering if not needed
-    if (!this.renderState.needsRedraw) return;
-    
+    // Always render when called from animation frame (for continuous rotation)
+    // Skip only if explicitly paused (future feature)
     const startTime = performance.now();
     
     // Clear canvas
@@ -99,10 +145,7 @@ export default class GeometryRenderer {
     // Update metrics
     this.metrics.frameTime = performance.now() - startTime;
     this.metrics.frameCount++;
-    
-    // Reset needs redraw flag
-    this.renderState.needsRedraw = false;
-    
+
     // Emit metrics
     if (this.metrics.frameCount % 60 === 0) {
       this.eventGear.emit('render.metrics', { ...this.metrics });
@@ -171,9 +214,8 @@ export default class GeometryRenderer {
    * @param {Object} angleSinCos - Rotation values
    */
   drawCoordinateSystem(centerX, centerY, radius, axisCount, type, color, angleSinCos) {
-    this.ctx.strokeStyle = color;
-    this.ctx.lineWidth = 1;
-    
+    this.setupStroke(color, 1, false);
+
     if (type === 'radial') {
       // Draw radial coordinate system
       const angleStep = (2 * Math.PI) / axisCount;
@@ -220,8 +262,7 @@ export default class GeometryRenderer {
    * @param {string} color - Circle color
    */
   drawCircle(centerX, centerY, radius, color) {
-    this.ctx.strokeStyle = color;
-    this.ctx.lineWidth = 2;
+    this.setupStroke(color, 2, false);
     this.ctx.beginPath();
     this.ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
     this.ctx.stroke();
@@ -237,36 +278,7 @@ export default class GeometryRenderer {
    * @param {Object} angleSinCos - Rotation values
    */
   drawHexagon(centerX, centerY, radius, color, isDashed, angleSinCos) {
-    this.ctx.strokeStyle = color;
-    this.ctx.lineWidth = 2;
-    
-    if (isDashed) {
-      this.ctx.setLineDash([5, 5]);
-    } else {
-      this.ctx.setLineDash([]);
-    }
-    
-    const sides = 6;
-    const angleStep = (2 * Math.PI) / sides;
-    const startAngle = Math.atan2(angleSinCos.sin, angleSinCos.cos);
-    
-    this.ctx.beginPath();
-    
-    // Draw hexagon points
-    for (let i = 0; i <= sides; i++) {
-      const angle = i * angleStep + startAngle;
-      const x = centerX + radius * Math.cos(angle);
-      const y = centerY + radius * Math.sin(angle);
-      
-      if (i === 0) {
-        this.ctx.moveTo(x, y);
-      } else {
-        this.ctx.lineTo(x, y);
-      }
-    }
-    
-    this.ctx.stroke();
-    this.ctx.setLineDash([]);
+    this.drawRegularPolygon(centerX, centerY, radius, 6, color, isDashed, angleSinCos);
   }
   
   /**
@@ -279,35 +291,9 @@ export default class GeometryRenderer {
    * @param {Object} angleSinCos - Rotation values
    */
   drawSquare(centerX, centerY, size, color, isDashed, angleSinCos) {
-    this.ctx.strokeStyle = color;
-    this.ctx.lineWidth = 2;
-    
-    if (isDashed) {
-      this.ctx.setLineDash([5, 5]);
-    } else {
-      this.ctx.setLineDash([]);
-    }
-    
-    const halfSize = size / 2;
-    const startAngle = Math.atan2(angleSinCos.sin, angleSinCos.cos);
-    
-    this.ctx.beginPath();
-    
-    // Draw rotated square
-    for (let i = 0; i <= 4; i++) {
-      const angle = startAngle + (i * Math.PI / 2);
-      const x = centerX + halfSize * Math.cos(angle);
-      const y = centerY + halfSize * Math.sin(angle);
-      
-      if (i === 0) {
-        this.ctx.moveTo(x, y);
-      } else {
-        this.ctx.lineTo(x, y);
-      }
-    }
-    
-    this.ctx.stroke();
-    this.ctx.setLineDash([]);
+    // Square uses halfSize as radius for corner distance
+    const radius = size / 2;
+    this.drawRegularPolygon(centerX, centerY, radius, 4, color, isDashed, angleSinCos);
   }
   
   /**
@@ -319,30 +305,7 @@ export default class GeometryRenderer {
    * @param {Object} angleSinCos - Rotation values
    */
   drawTriangle(centerX, centerY, size, color, angleSinCos) {
-    this.ctx.strokeStyle = color;
-    this.ctx.lineWidth = 2;
-    this.ctx.setLineDash([]);
-    
-    const startAngle = Math.atan2(angleSinCos.sin, angleSinCos.cos);
-    const sides = 3;
-    const angleStep = (2 * Math.PI) / sides;
-    
-    this.ctx.beginPath();
-    
-    // Draw triangle points
-    for (let i = 0; i <= sides; i++) {
-      const angle = i * angleStep + startAngle;
-      const x = centerX + size * Math.cos(angle);
-      const y = centerY + size * Math.sin(angle);
-      
-      if (i === 0) {
-        this.ctx.moveTo(x, y);
-      } else {
-        this.ctx.lineTo(x, y);
-      }
-    }
-    
-    this.ctx.stroke();
+    this.drawRegularPolygon(centerX, centerY, size, 3, color, false, angleSinCos);
   }
   
   /**
@@ -384,5 +347,20 @@ export default class GeometryRenderer {
    */
   forceRedraw() {
     this.renderState.needsRedraw = true;
+  }
+
+  /**
+   * Cleans up resources when the module is no longer needed
+   */
+  dispose() {
+    // Remove window resize listener
+    if (this.resizeHandler) {
+      window.removeEventListener('resize', this.resizeHandler);
+    }
+
+    // EventGear listeners are managed by EventGear itself
+    // Canvas context doesn't need explicit cleanup
+
+    console.log('GeometryRenderer disposed');
   }
 } 

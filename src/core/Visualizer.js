@@ -50,15 +50,19 @@ export default class Visualizer {
     
     // Set up event callbacks
     this.setupEventCallbacks();
-    
-    // Set up performance tracking
-    this.setupPerformanceTracking();
-    
+
+    // Set up performance tracking (optional for better performance in simple use cases)
+    if (this.options.performanceTracking) {
+      this.setupPerformanceTracking();
+    }
+
     // Set up resize observer
     this.setupResizeObserver();
-    
-    // Register visualizer events
-    this.registerVisualizerEvents();
+
+    // Register visualizer events (metrics tracking)
+    if (this.options.performanceTracking) {
+      this.registerVisualizerEvents();
+    }
     
     // Set up debug mode if enabled
     if (this.options.enableDebug) {
@@ -692,22 +696,24 @@ export default class Visualizer {
     
     // Calculate FPS
     this.fps = 1000 / delta;
-    
-    // Update frame statistics in metadata
-    const metadata = this.eventGear.getMetadata() || {};
-    const visualizerMetadata = metadata.visualizer || {};
-    
-    this.eventGear.setMetadata({
-      ...metadata,
-      visualizer: {
-        ...visualizerMetadata,
-        fps: this.fps,
-        frameTime: delta,
-        frameCount: this.frameCount,
-        lastFrameTime: timestamp
-      }
-    });
-    
+
+    // Update frame statistics in metadata (only if performance tracking enabled)
+    if (this.options.performanceTracking) {
+      const metadata = this.eventGear.getMetadata() || {};
+      const visualizerMetadata = metadata.visualizer || {};
+
+      this.eventGear.setMetadata({
+        ...metadata,
+        visualizer: {
+          ...visualizerMetadata,
+          fps: this.fps,
+          frameTime: delta,
+          frameCount: this.frameCount,
+          lastFrameTime: timestamp
+        }
+      });
+    }
+
     // Emit animation frame event with expanded data
     this.eventGear.emit('animation.frame', {
       timestamp,
@@ -715,16 +721,18 @@ export default class Visualizer {
       fps: this.fps,
       frameCount: this.frameCount
     });
-    
-    // Register frame event with performance data
-    this.eventGear.registerEvent({
-      type: 'animation.frame.metrics',
-      timestamp,
-      delta,
-      fps: this.fps,
-      frameCount: this.frameCount,
-      performanceNow: performance.now()
-    });
+
+    // Register frame event with performance data (only if performance tracking enabled)
+    if (this.options.performanceTracking) {
+      this.eventGear.registerEvent({
+        type: 'animation.frame.metrics',
+        timestamp,
+        delta,
+        fps: this.fps,
+        frameCount: this.frameCount,
+        performanceNow: performance.now()
+      });
+    }
     
     // Update FPS display if enabled
     if (this.options.showFPS) {
